@@ -1,0 +1,1 @@
+# SmartShelf-Ak-ll-r-n-E-le-tirme-ve-Stok-Takip-Sistemi-
