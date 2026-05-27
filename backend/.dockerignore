@@ -1,0 +1,12 @@
+node_modules
+dist
+.env
+.env.local
+.env.*.local
+*.log
+coverage
+.git
+.gitignore
+tests
+README.md
+demo-server.js

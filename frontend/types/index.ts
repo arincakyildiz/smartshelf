@@ -43,9 +43,9 @@ export interface StockRequest {
   quantity_needed: number;
   status: 'pending' | 'fulfilled' | 'cancelled';
   created_at: string;
-  store_name: string;
-  product_name: string;
-  sku: string;
+  store_name?: string;
+  product_name?: string;
+  sku?: string;
 }
 
 export interface MatchResult {

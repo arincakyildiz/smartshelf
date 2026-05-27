@@ -1,4 +1,14 @@
 import 'dotenv/config';
+
+// Required environment variables
+const required = ['DATABASE_URL', 'JWT_SECRET'];
+for (const key of required) {
+  if (!process.env[key]) {
+    console.error(`[FATAL] Missing required env var: ${key}`);
+    if (process.env.NODE_ENV === 'production') process.exit(1);
+  }
+}
+
 import express from 'express';
 import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
@@ -45,8 +55,12 @@ io.on('connection', (socket) => {
 });
 
 const PORT = process.env.PORT || 4000;
-httpServer.listen(PORT, () => {
-  console.log(`SmartShelf API running on port ${PORT}`);
-});
 
-export { app };
+// Don't auto-listen during tests
+if (process.env.NODE_ENV !== 'test') {
+  httpServer.listen(PORT, () => {
+    console.log(`SmartShelf API running on port ${PORT}`);
+  });
+}
+
+export { app, httpServer, io };

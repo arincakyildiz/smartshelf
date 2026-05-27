@@ -1,15 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
-import { setToken } from '@/lib/auth';
+import { isAuthenticated, setToken } from '@/lib/auth';
 
 export default function LoginPage() {
   const router = useRouter();
   const [form, setForm] = useState({ email: 'admin@smartshelf.com', password: 'admin123' });
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated()) router.replace('/dashboard');
+  }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();

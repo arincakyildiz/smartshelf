@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState } from 'react';
 import { removeToken } from '@/lib/auth';
 
 const nav = [
@@ -30,14 +31,15 @@ const nav = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   function logout() {
     removeToken();
     router.push('/login');
   }
 
-  return (
-    <aside className="w-64 bg-navy-900 min-h-screen flex flex-col">
+  const sidebarContent = (
+    <>
       {/* Brand */}
       <div className="px-6 py-5 border-b border-navy-800">
         <div className="flex items-center gap-3">
@@ -59,6 +61,7 @@ export default function Sidebar() {
             <Link
               key={href}
               href={href}
+              onClick={() => setMobileOpen(false)}
               className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
                 active
                   ? 'bg-white text-navy-900'
@@ -87,6 +90,49 @@ export default function Sidebar() {
           Çıkış Yap
         </button>
       </div>
-    </aside>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 bg-navy-900 text-white z-30 flex items-center justify-between px-4 py-3 shadow-lg">
+        <div className="flex items-center gap-2">
+          <div className="w-7 h-7 bg-white rounded-lg flex items-center justify-center">
+            <svg className="w-4 h-4 text-navy-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </div>
+          <span className="font-bold">SmartShelf</span>
+        </div>
+        <button onClick={() => setMobileOpen(!mobileOpen)} className="p-2">
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            {mobileOpen ? (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            ) : (
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            )}
+          </svg>
+        </button>
+      </div>
+
+      {/* Mobile overlay */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/50 z-30"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* Sidebar - desktop static, mobile drawer */}
+      <aside
+        className={`bg-navy-900 min-h-screen flex flex-col z-40 transition-transform lg:relative lg:translate-x-0 lg:w-64 ${
+          mobileOpen ? 'fixed inset-y-0 left-0 w-64 translate-x-0' : 'fixed inset-y-0 left-0 w-64 -translate-x-full lg:translate-x-0'
+        }`}
+      >
+        {sidebarContent}
+      </aside>
+    </>
   );
 }
