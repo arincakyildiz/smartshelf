@@ -50,6 +50,14 @@ export interface ProductWithStock extends Product {
   store_count: number;
 }
 
+export interface PaginatedResponse<T> {
+  items: T[];
+  total: number;
+  page: number;
+  limit: number;
+  total_pages: number;
+}
+
 export interface StockRequest {
   id: string;
   requesting_store_id: string;

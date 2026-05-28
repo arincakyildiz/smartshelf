@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { InventoryHistoryItem, ActionType, Store } from '@/types';
+import Pagination from '@/components/ui/Pagination';
 
 const ACTION_LABEL: Record<ActionType, { label: string; color: string; icon: string }> = {
   STOCK_ADDED:        { label: 'Stok Eklendi',        color: 'bg-green-100 text-green-700',  icon: '+' },
@@ -13,42 +14,69 @@ const ACTION_LABEL: Record<ActionType, { label: string; color: string; icon: str
   SALE:               { label: 'Satış',               color: 'bg-purple-100 text-purple-700',icon: '−' },
 };
 
+const LIMIT = 20;
+
 export default function HistoryPage() {
   const [items, setItems] = useState<InventoryHistoryItem[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
-  const [selectedStore, setSelectedStore] = useState<string>('');
+  const [filterStore, setFilterStore]   = useState<string>('');
+  const [filterAction, setFilterAction] = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  async function fetchData() {
+  const fetchData = useCallback(async () => {
+    setLoading(true);
     try {
-      const params = selectedStore ? `?store_id=${selectedStore}` : '';
-      const [hRes, sRes] = await Promise.all([
-        api.get(`/inventory/history${params}`),
-        api.get('/stores'),
-      ]);
-      setItems(hRes.data);
-      setStores(sRes.data);
+      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+      if (filterStore)  params.set('store_id', filterStore);
+      if (filterAction) params.set('action_type', filterAction);
+      const { data } = await api.get(`/inventory/history?${params}`);
+      setItems(data.items);
+      setTotal(data.total);
+      setTotalPages(data.total_pages);
     } catch {
       toast.error('Geçmiş yüklenemedi');
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, filterStore, filterAction]);
 
-  useEffect(() => { fetchData(); }, [selectedStore]);
+  useEffect(() => {
+    api.get('/stores').then(({ data }) => {
+      setStores(Array.isArray(data) ? data : data.items);
+    }).catch(() => {});
+  }, []);
+
+  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { setPage(1); }, [filterStore, filterAction]);
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Stok Geçmişi</h1>
-          <p className="text-gray-500 text-sm mt-1">Tüm envanter değişikliklerinin denetim kaydı</p>
+          <p className="text-gray-500 text-sm mt-1">{total} kayıt</p>
         </div>
-        <select className="input w-full sm:w-56" value={selectedStore}
-          onChange={(e) => setSelectedStore(e.target.value)}>
-          <option value="">Tüm Mağazalar</option>
-          {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-        </select>
+      </div>
+
+      {/* Filters */}
+      <div className="card mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <select className="input" value={filterStore} onChange={(e) => setFilterStore(e.target.value)}>
+            <option value="">Tüm Mağazalar</option>
+            {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+          <select className="input" value={filterAction} onChange={(e) => setFilterAction(e.target.value)}>
+            <option value="">Tüm Aksiyonlar</option>
+            <option value="STOCK_ADDED">Stok Eklendi</option>
+            <option value="TRANSFER_SENT">Transfer Gönderildi</option>
+            <option value="TRANSFER_RECEIVED">Transfer Alındı</option>
+            <option value="MANUAL_UPDATE">Manuel Güncelleme</option>
+            <option value="SALE">Satış</option>
+          </select>
+        </div>
       </div>
 
       {loading ? (
@@ -57,7 +85,7 @@ export default function HistoryPage() {
         </div>
       ) : items.length === 0 ? (
         <div className="card text-center py-12 text-gray-500">
-          Henüz kayıt yok. Stok güncellemesi veya transfer yapıldığında burada görünecek.
+          {filterStore || filterAction ? 'Filtreye uyan kayıt yok' : 'Henüz kayıt yok'}
         </div>
       ) : (
         <div className="card">
@@ -96,6 +124,7 @@ export default function HistoryPage() {
               );
             })}
           </ul>
+          <Pagination page={page} totalPages={totalPages} total={total} limit={LIMIT} onPageChange={setPage} />
         </div>
       )}
     </div>

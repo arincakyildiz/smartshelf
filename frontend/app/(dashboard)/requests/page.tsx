@@ -22,8 +22,8 @@ export default function RequestsPage() {
         api.get('/products'),
       ]);
       setRequests(reqRes.data);
-      setStores(storeRes.data);
-      setProducts(prodRes.data);
+      setStores(Array.isArray(storeRes.data) ? storeRes.data : storeRes.data.items);
+      setProducts(Array.isArray(prodRes.data) ? prodRes.data : prodRes.data.items);
     } catch {
       toast.error('Veriler yüklenemedi');
     } finally {

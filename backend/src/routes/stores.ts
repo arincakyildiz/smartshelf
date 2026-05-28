@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
 import { requireRole } from '../middleware/role';
 import {
-  getStores, getStore, createStore, updateStore, deleteStore,
+  getStores, getStore, createStore, updateStore, deleteStore, getCities,
 } from '../controllers/storeController';
 
 const router = Router();
 
 router.use(authenticate);
+router.get('/cities', getCities);
 router.get('/', getStores);
 router.get('/:id', getStore);
 router.post('/',     requireRole('admin'), createStore);

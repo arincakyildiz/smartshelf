@@ -5,6 +5,7 @@ import { Inventory, Product, Store, InventoryHistory } from '../models';
 import { cache } from '../config/redis';
 import { getStockLevel } from '../types';
 import { logInventoryChange } from '../services/historyService';
+import { parsePagination, paginated } from '../utils/paginate';
 
 let io: SocketServer | null = null;
 export function setSocketServer(socketIO: SocketServer): void {
@@ -150,22 +151,26 @@ export async function getProductsWithStock(req: Request, res: Response): Promise
   res.json(rows);
 }
 
-// GET /api/inventory/history?store_id=&product_id=&limit=
+// GET /api/inventory/history?store_id=&product_id=&action_type=&page=&limit=
 export async function getInventoryHistory(req: Request, res: Response): Promise<void> {
-  const { store_id, product_id } = req.query as Record<string, string | undefined>;
-  const limit = Math.min(parseInt((req.query.limit as string) || '50'), 200);
+  const { store_id, product_id, action_type } = req.query as Record<string, string | undefined>;
+  const p = parsePagination(req, 50);
 
   const filter: any = {};
-  if (store_id)   filter.store_id   = store_id;
-  if (product_id) filter.product_id = product_id;
+  if (store_id)    filter.store_id    = store_id;
+  if (product_id)  filter.product_id  = product_id;
+  if (action_type) filter.action_type = action_type;
 
-  const rows = await InventoryHistory.find(filter)
+  const query = InventoryHistory.find(filter)
     .populate<{ store_id: any }>('store_id', 'name city')
     .populate<{ product_id: any }>('product_id', 'name sku')
     .populate<{ actor_id: any }>('actor_id', 'name email')
-    .sort({ created_at: -1 })
-    .limit(limit)
-    .lean();
+    .sort({ created_at: -1 });
+
+  const total = p.isPaginated ? await InventoryHistory.countDocuments(filter) : 0;
+  const rows = p.isPaginated
+    ? await query.skip(p.skip).limit(p.limit).lean()
+    : await query.limit(50).lean();
 
   const mapped = rows.map((r: any) => ({
     id:                  r._id.toString(),
@@ -183,7 +188,7 @@ export async function getInventoryHistory(req: Request, res: Response): Promise<
     created_at:          r.created_at,
   }));
 
-  res.json(mapped);
+  res.json(p.isPaginated ? paginated(mapped, total, p) : mapped);
 }
 
 // PATCH /api/inventory/:store_id/:product_id

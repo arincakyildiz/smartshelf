@@ -32,7 +32,9 @@ export default function InventoryPage() {
   }
 
   useEffect(() => {
-    api.get('/stores').then(({ data }) => setStores(data));
+    api.get('/stores').then(({ data }) => {
+      setStores(Array.isArray(data) ? data : data.items);
+    });
   }, []);
 
   useEffect(() => { fetchInventory(); }, [selectedStore]);

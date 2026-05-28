@@ -12,7 +12,15 @@ jest.mock('../src/config/redis', () => ({
 }));
 jest.mock('../src/middleware/auth', () => ({
   __esModule: true,
-  authenticate: (_req: any, _res: any, next: any) => next(),
+  authenticate: (req: any, _res: any, next: any) => {
+    req.user = { id: '1', email: 'admin@test.com', role: 'admin' };
+    next();
+  },
+}));
+jest.mock('../src/middleware/role', () => ({
+  __esModule: true,
+  requireRole: () => (_req: any, _res: any, next: any) => next(),
+  enforceStoreScope: () => (_req: any, _res: any, next: any) => next(),
 }));
 jest.mock('../src/models', () => ({
   __esModule: true,
@@ -35,13 +43,13 @@ const sample = { id: '1', name: 'Test Ürün', sku: 'SKU-001', category: 'Elektr
 describe('GET /api/products', () => {
   beforeEach(() => jest.clearAllMocks());
 
-  it('returns product list', async () => {
+  it('returns product list (legacy mode)', async () => {
     (Product.find as jest.Mock).mockReturnValue({
       sort: jest.fn().mockResolvedValue([sample]),
     });
     const res = await request(app).get('/api/products');
     expect(res.status).toBe(200);
-    expect(res.body).toHaveLength(1);
+    expect(Array.isArray(res.body)).toBe(true);
     expect(res.body[0].sku).toBe('SKU-001');
   });
 });

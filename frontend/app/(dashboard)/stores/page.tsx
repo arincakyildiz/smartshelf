@@ -12,18 +12,38 @@ export default function StoresPage() {
   const [editing, setEditing] = useState<Store | null>(null);
   const [form, setForm] = useState({ name: '', city: '', is_active: true });
 
-  async function fetchStores() {
+  const [cities, setCities] = useState<string[]>([]);
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [filterCity, setFilterCity] = useState('');
+  const [filterActive, setFilterActive] = useState<string>('');
+
+  const fetchStores = async () => {
+    setLoading(true);
     try {
-      const { data } = await api.get('/stores');
-      setStores(data);
+      const params = new URLSearchParams();
+      if (search)       params.set('search', search);
+      if (filterCity)   params.set('city', filterCity);
+      if (filterActive) params.set('is_active', filterActive);
+      const { data } = await api.get(`/stores${params.toString() ? '?' + params : ''}`);
+      // city filter active → response is array (no pagination needed for stores typically)
+      setStores(Array.isArray(data) ? data : data.items);
     } catch {
       toast.error('Mağazalar yüklenemedi');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  useEffect(() => { fetchStores(); }, []);
+  useEffect(() => { fetchStores(); }, [search, filterCity, filterActive]);
+  useEffect(() => {
+    api.get('/stores/cities').then(({ data }) => setCities(data)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(searchInput.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchInput]);
 
   function openCreate() {
     setEditing(null);
@@ -91,12 +111,41 @@ export default function StoresPage() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mağazalar</h1>
           <p className="text-gray-500 text-sm mt-1">{stores.length} mağaza</p>
         </div>
         <button onClick={openCreate} className="btn-primary">+ Mağaza Ekle</button>
+      </div>
+
+      {/* Filters */}
+      <div className="card mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="relative">
+            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+              fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              className="input pl-9"
+              placeholder="Mağaza adı veya şehir ara..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+            />
+          </div>
+          <select className="input" value={filterCity} onChange={(e) => setFilterCity(e.target.value)}>
+            <option value="">Tüm Şehirler</option>
+            {cities.map((c) => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <select className="input" value={filterActive} onChange={(e) => setFilterActive(e.target.value)}>
+            <option value="">Tüm Durumlar</option>
+            <option value="true">Sadece Aktif</option>
+            <option value="false">Sadece Pasif</option>
+          </select>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

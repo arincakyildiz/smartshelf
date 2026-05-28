@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import { z } from 'zod';
 import { Store, Inventory, Transfer, StockRequest, User } from '../models';
 import { cache } from '../config/redis';
+import { parsePagination, parseSort, paginated } from '../utils/paginate';
 
 const CACHE_KEY = 'stores:all';
 
@@ -12,12 +13,45 @@ const storeSchema = z.object({
 });
 
 export async function getStores(req: Request, res: Response): Promise<void> {
-  const cached = await cache.get(CACHE_KEY);
-  if (cached) { res.json(cached); return; }
+  const p = parsePagination(req);
+  const { sort_by, sort_dir } = parseSort(req, 'name', 'asc');
+  const search    = (req.query.search as string)?.trim();
+  const city      = (req.query.city   as string)?.trim();
+  const isActive  = req.query.is_active === 'true' ? true
+                  : req.query.is_active === 'false' ? false : undefined;
 
-  const stores = await Store.find().sort({ name: 1 });
-  await cache.set(CACHE_KEY, stores, 120);
-  res.json(stores);
+  const isLegacy = !p.isPaginated && !search && !city && isActive === undefined && !req.query.sort_by;
+  if (isLegacy) {
+    const cached = await cache.get(CACHE_KEY);
+    if (cached) { res.json(cached); return; }
+    const stores = await Store.find().sort({ name: 1 });
+    await cache.set(CACHE_KEY, stores, 120);
+    res.json(stores); return;
+  }
+
+  const filter: any = {};
+  if (city) filter.city = city;
+  if (isActive !== undefined) filter.is_active = isActive;
+  if (search) {
+    const rx = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+    filter.$or = [{ name: rx }, { city: rx }];
+  }
+
+  const [items, total] = await Promise.all([
+    Store.find(filter).sort({ [sort_by]: sort_dir }).skip(p.skip).limit(p.limit),
+    Store.countDocuments(filter),
+  ]);
+  res.json(paginated(items, total, p));
+}
+
+// GET /api/stores/cities – distinct cities
+export async function getCities(_req: Request, res: Response): Promise<void> {
+  const cached = await cache.get<string[]>('stores:cities');
+  if (cached) { res.json(cached); return; }
+  const cities = await Store.distinct('city');
+  cities.sort();
+  await cache.set('stores:cities', cities, 300);
+  res.json(cities);
 }
 
 export async function getStore(req: Request, res: Response): Promise<void> {

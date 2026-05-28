@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { Transfer, TransferStatus, Store, Product } from '@/types';
+import Pagination from '@/components/ui/Pagination';
 
 const STATUS_MAP: Record<TransferStatus, { label: string; cls: string }> = {
   PENDING:   { label: 'Beklemede',    cls: 'bg-yellow-100 text-yellow-700' },
@@ -11,6 +12,8 @@ const STATUS_MAP: Record<TransferStatus, { label: string; cls: string }> = {
   REJECTED:  { label: 'Reddedildi',   cls: 'bg-red-100 text-red-700'       },
   COMPLETED: { label: 'Tamamlandı',   cls: 'bg-green-100 text-green-700'   },
 };
+
+const LIMIT = 10;
 
 export default function TransfersPage() {
   const [transfers, setTransfers] = useState<Transfer[]>([]);
@@ -22,24 +25,44 @@ export default function TransfersPage() {
     source_store_id: '', target_store_id: '', product_id: '', quantity: '', notes: '',
   });
 
-  async function fetchAll() {
+  // Filters & pagination
+  const [filterStatus, setFilterStatus] = useState<string>('');
+  const [filterStore, setFilterStore]   = useState<string>('');
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+
+  const fetchTransfers = useCallback(async () => {
+    setLoading(true);
     try {
-      const [tRes, sRes, pRes] = await Promise.all([
-        api.get('/transfers'),
-        api.get('/stores'),
-        api.get('/products'),
-      ]);
-      setTransfers(tRes.data);
-      setStores(sRes.data);
-      setProducts(pRes.data);
+      const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+      if (filterStatus) params.set('status', filterStatus);
+      if (filterStore)  params.set('store_id', filterStore);
+      const { data } = await api.get(`/transfers?${params}`);
+      setTransfers(data.items);
+      setTotal(data.total);
+      setTotalPages(data.total_pages);
     } catch {
-      toast.error('Veriler yüklenemedi');
+      toast.error('Transferler yüklenemedi');
     } finally {
       setLoading(false);
     }
-  }
+  }, [page, filterStatus, filterStore]);
 
-  useEffect(() => { fetchAll(); }, []);
+  // Initial load: stores + products for dropdowns
+  useEffect(() => {
+    Promise.all([api.get('/stores'), api.get('/products')])
+      .then(([s, p]) => {
+        setStores(Array.isArray(s.data) ? s.data : s.data.items);
+        setProducts(Array.isArray(p.data) ? p.data : p.data.items);
+      })
+      .catch(() => toast.error('Veriler yüklenemedi'));
+  }, []);
+
+  useEffect(() => { fetchTransfers(); }, [fetchTransfers]);
+  useEffect(() => { setPage(1); }, [filterStatus, filterStore]);
+
+  const fetchAll = fetchTransfers;
 
   async function handleAction(id: string, action: 'approve' | 'reject' | 'complete') {
     const label = action === 'approve' ? 'onaylanıyor' : action === 'reject' ? 'reddediliyor' : 'tamamlanıyor';
@@ -73,14 +96,31 @@ export default function TransfersPage() {
 
   return (
     <div className="p-4 sm:p-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Mağaza Transferleri</h1>
-          <p className="text-gray-500 text-sm mt-1">Mağazalar arası stok hareketleri</p>
+          <p className="text-gray-500 text-sm mt-1">{total} transfer</p>
         </div>
         <button onClick={() => setShowModal(true)} className="btn-primary">
           + Yeni Transfer
         </button>
+      </div>
+
+      {/* Filters */}
+      <div className="card mb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <select className="input" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
+            <option value="">Tüm Durumlar</option>
+            <option value="PENDING">Beklemede</option>
+            <option value="APPROVED">Onaylandı</option>
+            <option value="REJECTED">Reddedildi</option>
+            <option value="COMPLETED">Tamamlandı</option>
+          </select>
+          <select className="input" value={filterStore} onChange={(e) => setFilterStore(e.target.value)}>
+            <option value="">Tüm Mağazalar</option>
+            {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
       </div>
 
       <div className="card overflow-x-auto">
@@ -148,6 +188,9 @@ export default function TransfersPage() {
               })}
             </tbody>
           </table>
+        )}
+        {!loading && transfers.length > 0 && (
+          <Pagination page={page} totalPages={totalPages} total={total} limit={LIMIT} onPageChange={setPage} />
         )}
       </div>
 

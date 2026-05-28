@@ -5,6 +5,7 @@ import { Server as SocketServer } from 'socket.io';
 import { Transfer, Inventory } from '../models';
 import { cache } from '../config/redis';
 import { logInventoryChange } from '../services/historyService';
+import { parsePagination, parseSort, paginated } from '../utils/paginate';
 
 let io: SocketServer | null = null;
 export function setSocketServerTransfer(socketIO: SocketServer): void {
@@ -62,21 +63,31 @@ export async function createTransfer(req: Request, res: Response): Promise<void>
   res.status(201).json(transfer);
 }
 
-// GET /api/transfers?status=
+// GET /api/transfers?status=&store_id=&page=&limit=
 export async function listTransfers(req: Request, res: Response): Promise<void> {
-  const { status, store_id } = req.query as Record<string, string | undefined>;
+  const { status, store_id, date_from, date_to } = req.query as Record<string, string | undefined>;
+  const p = parsePagination(req);
+  const { sort_by, sort_dir } = parseSort(req, 'created_at', 'desc');
+
   const filter: any = {};
-  if (status) filter.status = status;
-  if (store_id) {
-    filter.$or = [{ source_store_id: store_id }, { target_store_id: store_id }];
+  if (status)   filter.status = status;
+  if (store_id) filter.$or = [{ source_store_id: store_id }, { target_store_id: store_id }];
+  if (date_from || date_to) {
+    filter.created_at = {};
+    if (date_from) filter.created_at.$gte = new Date(date_from);
+    if (date_to)   filter.created_at.$lte = new Date(date_to);
   }
 
-  const rows = await Transfer.find(filter)
+  const query = Transfer.find(filter)
     .populate<{ source_store_id: any }>('source_store_id', 'name city')
     .populate<{ target_store_id: any }>('target_store_id', 'name city')
     .populate<{ product_id: any }>('product_id', 'name sku')
-    .sort({ created_at: -1 })
-    .lean();
+    .sort({ [sort_by]: sort_dir });
+
+  const total = p.isPaginated ? await Transfer.countDocuments(filter) : 0;
+  const rows = p.isPaginated
+    ? await query.skip(p.skip).limit(p.limit).lean()
+    : await query.lean();
 
   const mapped = rows.map((t: any) => ({
     id:               t._id.toString(),
@@ -97,7 +108,7 @@ export async function listTransfers(req: Request, res: Response): Promise<void> 
     completed_at:     t.completed_at,
   }));
 
-  res.json(mapped);
+  res.json(p.isPaginated ? paginated(mapped, total, p) : mapped);
 }
 
 // PATCH /api/transfers/:id  – approve / reject / complete
