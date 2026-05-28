@@ -1,68 +1,56 @@
-import pool from '../config/database';
+import { Inventory, Store } from '../models';
 import { MatchResult } from '../types';
 
 /**
  * Match Scoring:
  * +40 - Fazla stok (istenenden 25+ fazla)
  * +25 - Yeterli stok (istenenden 10-24 fazla)
+ * +10 - Stok karşılanabilir
  * +30 - Aynı şehir
- * +10 - Aktif mağaza (base)
+ * +10 - base
  */
 export async function findMatches(
-  requestingStoreId: number,
-  productId: number,
+  requestingStoreId: string,
+  productId: string,
   quantityNeeded: number
 ): Promise<MatchResult[]> {
-  const result = await pool.query(
-    `SELECT
-       i.store_id,
-       i.quantity,
-       s.name AS store_name,
-       s.city AS store_city,
-       rs.city AS requesting_city
-     FROM inventory i
-     JOIN stores s ON s.id = i.store_id
-     JOIN stores rs ON rs.id = $1
-     WHERE i.product_id = $2
-       AND i.store_id != $1
-       AND i.quantity > 0
-       AND s.is_active = true`,
-    [requestingStoreId, productId]
-  );
+  const reqStore = await Store.findById(requestingStoreId).lean();
+  if (!reqStore) return [];
 
-  const matches: MatchResult[] = result.rows
-    .map((row) => {
-      const available = Number(row.quantity);
+  const candidates = await Inventory.find({
+    product_id: productId,
+    store_id: { $ne: requestingStoreId },
+    quantity: { $gt: 0 },
+  })
+    .populate<{ store_id: any }>('store_id', 'name city is_active')
+    .lean();
+
+  const matches: MatchResult[] = candidates
+    .filter((c: any) => c.store_id?.is_active)
+    .map((c: any) => {
+      const available = c.quantity;
       const excess = available - quantityNeeded;
       const reasons: string[] = [];
-      let score = 10; // base
+      let score = 10;
 
-      if (excess >= 25) {
-        score += 40;
-        reasons.push('Fazla stok mevcut');
-      } else if (excess >= 10) {
-        score += 25;
-        reasons.push('Yeterli stok mevcut');
-      } else if (available >= quantityNeeded) {
-        score += 10;
-        reasons.push('Stok karşılanabilir');
-      }
+      if (excess >= 25)        { score += 40; reasons.push('Fazla stok mevcut'); }
+      else if (excess >= 10)   { score += 25; reasons.push('Yeterli stok mevcut'); }
+      else if (available >= quantityNeeded) { score += 10; reasons.push('Stok karşılanabilir'); }
 
-      if (row.store_city === row.requesting_city) {
+      if (c.store_id.city === reqStore.city) {
         score += 30;
         reasons.push('Aynı şehir');
       }
 
       return {
-        source_store_id: row.store_id,
-        source_store_name: row.store_name,
-        source_store_city: row.store_city,
+        source_store_id:    c.store_id._id.toString(),
+        source_store_name:  c.store_id.name,
+        source_store_city:  c.store_id.city,
         available_quantity: available,
         score,
         reasons,
       };
     })
-    .filter((m) => m.available_quantity >= quantityNeeded || m.available_quantity > 0)
     .sort((a, b) => b.score - a.score);
 
   return matches;

@@ -3,18 +3,18 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
-import { Product } from '@/types';
+import { ProductWithStock } from '@/types';
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithStock[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [editing, setEditing] = useState<Product | null>(null);
+  const [editing, setEditing] = useState<ProductWithStock | null>(null);
   const [form, setForm] = useState({ name: '', sku: '', category: '', price: '' });
 
   async function fetchProducts() {
     try {
-      const { data } = await api.get('/products');
+      const { data } = await api.get('/inventory/products-with-stock');
       setProducts(data);
     } catch {
       toast.error('Ürünler yüklenemedi');
@@ -31,7 +31,7 @@ export default function ProductsPage() {
     setShowModal(true);
   }
 
-  function openEdit(p: Product) {
+  function openEdit(p: ProductWithStock) {
     setEditing(p);
     setForm({ name: p.name, sku: p.sku, category: p.category, price: String(p.price) });
     setShowModal(true);
@@ -89,11 +89,18 @@ export default function ProductsPage() {
                 <th className="pb-3 font-medium">SKU</th>
                 <th className="pb-3 font-medium">Kategori</th>
                 <th className="pb-3 font-medium">Fiyat</th>
+                <th className="pb-3 font-medium">Toplam Stok</th>
+                <th className="pb-3 font-medium">Mağaza Sayısı</th>
                 <th className="pb-3 font-medium"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {products.map((p) => (
+              {products.map((p) => {
+                const stockCls =
+                  p.total_stock < 10 ? 'text-red-600' :
+                  p.total_stock < 25 ? 'text-yellow-600' :
+                  'text-green-700';
+                return (
                 <tr key={p.id} className="hover:bg-gray-50">
                   <td className="py-3 font-medium text-gray-800">{p.name}</td>
                   <td className="py-3 text-gray-500 font-mono">{p.sku}</td>
@@ -103,12 +110,14 @@ export default function ProductsPage() {
                     </span>
                   </td>
                   <td className="py-3 text-gray-700">₺{Number(p.price).toFixed(2)}</td>
+                  <td className={`py-3 font-semibold ${stockCls}`}>{p.total_stock} adet</td>
+                  <td className="py-3 text-gray-500">{p.store_count}</td>
                   <td className="py-3 text-right space-x-2">
                     <button onClick={() => openEdit(p)} className="text-navy-600 hover:text-navy-800 text-xs font-medium">Düzenle</button>
                     <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">Sil</button>
                   </td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
         )}

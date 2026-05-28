@@ -2,7 +2,7 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt, { SignOptions } from 'jsonwebtoken';
 import { z } from 'zod';
-import pool from '../config/database';
+import { User } from '../models';
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -17,8 +17,7 @@ export async function login(req: Request, res: Response): Promise<void> {
   }
   const { email, password } = parsed.data;
 
-  const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
-  const user = result.rows[0];
+  const user = await User.findOne({ email });
   if (!user) {
     res.status(401).json({ error: 'E-posta veya şifre hatalı' });
     return;
@@ -46,13 +45,10 @@ export async function login(req: Request, res: Response): Promise<void> {
 }
 
 export async function me(req: Request, res: Response): Promise<void> {
-  const result = await pool.query(
-    'SELECT id, email, name, role, created_at FROM users WHERE id = $1',
-    [req.user!.id]
-  );
-  if (!result.rows[0]) {
+  const user = await User.findById(req.user!.id).select('-password_hash');
+  if (!user) {
     res.status(404).json({ error: 'Kullanıcı bulunamadı' });
     return;
   }
-  res.json(result.rows[0]);
+  res.json(user);
 }

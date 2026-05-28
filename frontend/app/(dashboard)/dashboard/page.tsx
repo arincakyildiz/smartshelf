@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
-import { DashboardStats, InventoryItem } from '@/types';
+import { DashboardStats, ExcessStore, InventoryItem } from '@/types';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
 
@@ -29,16 +29,19 @@ function StatCard({ label, value, color, icon }: {
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [critical, setCritical] = useState<InventoryItem[]>([]);
+  const [excessStores, setExcessStores] = useState<ExcessStore[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     try {
-      const [statsRes, inventoryRes] = await Promise.all([
+      const [statsRes, inventoryRes, excessRes] = await Promise.all([
         api.get('/inventory/stats'),
         api.get('/inventory'),
+        api.get('/inventory/excess-stores'),
       ]);
       setStats(statsRes.data);
       setCritical(inventoryRes.data.filter((i: InventoryItem) => i.stock_level === 'critical'));
+      setExcessStores(excessRes.data);
     } catch {
       toast.error('Veriler yüklenemedi');
     } finally {
@@ -80,44 +83,82 @@ export default function DashboardPage() {
           icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />} />
       </div>
 
-      {/* Critical Items */}
-      <div className="card">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">
-          Kritik Stok Ürünleri
-          {critical.length > 0 && (
-            <span className="ml-2 badge-critical">{critical.length}</span>
-          )}
-        </h2>
-        {critical.length === 0 ? (
-          <p className="text-sm text-gray-500">Kritik stok yok.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-gray-500 border-b">
-                  <th className="pb-3 font-medium">Ürün</th>
-                  <th className="pb-3 font-medium">SKU</th>
-                  <th className="pb-3 font-medium">Mağaza</th>
-                  <th className="pb-3 font-medium">Şehir</th>
-                  <th className="pb-3 font-medium">Miktar</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {critical.map((item) => (
-                  <tr key={item.id} className="hover:bg-gray-50">
-                    <td className="py-3 font-medium text-gray-800">{item.product_name}</td>
-                    <td className="py-3 text-gray-500">{item.product_sku}</td>
-                    <td className="py-3">{item.store_name}</td>
-                    <td className="py-3 text-gray-500">{item.store_city}</td>
-                    <td className="py-3">
-                      <span className="badge-critical">{item.quantity} adet</span>
-                    </td>
+      {/* Two-column: Critical + Excess Stores */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">
+        {/* Critical Items */}
+        <div className="card xl:col-span-2">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">
+            Kritik Stok Ürünleri
+            {critical.length > 0 && (
+              <span className="ml-2 badge-critical">{critical.length}</span>
+            )}
+          </h2>
+          {critical.length === 0 ? (
+            <p className="text-sm text-gray-500">Kritik stok yok.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-left text-gray-500 border-b">
+                    <th className="pb-3 font-medium">Ürün</th>
+                    <th className="pb-3 font-medium">SKU</th>
+                    <th className="pb-3 font-medium">Mağaza</th>
+                    <th className="pb-3 font-medium">Şehir</th>
+                    <th className="pb-3 font-medium">Miktar</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {critical.map((item) => (
+                    <tr key={item.id} className="hover:bg-gray-50">
+                      <td className="py-3 font-medium text-gray-800">{item.product_name}</td>
+                      <td className="py-3 text-gray-500">{item.product_sku}</td>
+                      <td className="py-3">{item.store_name}</td>
+                      <td className="py-3 text-gray-500">{item.store_city}</td>
+                      <td className="py-3">
+                        <span className="badge-critical">{item.quantity} adet</span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        {/* Excess Stock Stores */}
+        <div className="card">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">
+            Fazla Stoklu Mağazalar
+            <span className="ml-2 text-xs text-gray-500 font-normal">(toplam stoğa göre)</span>
+          </h2>
+          {excessStores.length === 0 ? (
+            <p className="text-sm text-gray-500">Veri yok.</p>
+          ) : (
+            <ul className="space-y-3">
+              {excessStores.map((s, i) => (
+                <li key={s.store_id} className="flex items-start gap-3">
+                  <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-sm ${
+                    i === 0 ? 'bg-navy-800 text-white' :
+                    i === 1 ? 'bg-navy-200 text-navy-800' :
+                    'bg-gray-100 text-gray-600'
+                  }`}>
+                    {i + 1}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-medium text-gray-800 text-sm truncate">{s.store_name}</p>
+                    <p className="text-xs text-gray-500">{s.store_city}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-bold text-navy-800">{s.total_quantity}</p>
+                    {s.excess_product_count > 0 && (
+                      <p className="text-xs text-green-600">{s.excess_product_count} ürün 50+</p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

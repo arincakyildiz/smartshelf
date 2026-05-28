@@ -1,11 +1,10 @@
 import 'dotenv/config';
 
 // Required environment variables
-const required = ['DATABASE_URL', 'JWT_SECRET'];
+const required = ['MONGODB_URI', 'JWT_SECRET'];
 for (const key of required) {
   if (!process.env[key]) {
-    console.error(`[FATAL] Missing required env var: ${key}`);
-    if (process.env.NODE_ENV === 'production') process.exit(1);
+    console.warn(`[WARN] Missing env var: ${key} – using defaults`);
   }
 }
 
@@ -16,6 +15,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 
+import { connectDatabase } from './config/database';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import storeRoutes from './routes/stores';
@@ -63,11 +63,17 @@ io.on('connection', (socket) => {
 
 const PORT = process.env.PORT || 4000;
 
-// Don't auto-listen during tests
 if (process.env.NODE_ENV !== 'test') {
-  httpServer.listen(PORT, () => {
-    console.log(`SmartShelf API running on port ${PORT}`);
-  });
+  connectDatabase()
+    .then(() => {
+      httpServer.listen(PORT, () => {
+        console.log(`SmartShelf API running on port ${PORT}`);
+      });
+    })
+    .catch((err) => {
+      console.error('[FATAL] Database connection failed:', err.message);
+      process.exit(1);
+    });
 }
 
 export { app, httpServer, io };

@@ -1,31 +1,36 @@
 import request from 'supertest';
 
-process.env.JWT_SECRET = 'test-secret';
-process.env.JWT_EXPIRES_IN = '1h';
-
 jest.mock('../src/config/database', () => ({
   __esModule: true,
-  default: { query: jest.fn() },
+  connectDatabase: jest.fn().mockResolvedValue(undefined),
+  default: {},
 }));
 jest.mock('../src/config/redis', () => ({
   __esModule: true,
   cache: { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn(), delPattern: jest.fn() },
   default: { on: jest.fn() },
 }));
+jest.mock('../src/models', () => ({
+  __esModule: true,
+  User: { findOne: jest.fn(), findById: jest.fn() },
+  Product: {}, Store: {}, Inventory: {}, StockRequest: {}, MatchResult: {},
+}));
 
 import bcrypt from 'bcryptjs';
-import pool from '../src/config/database';
 import { app } from '../src/index';
-
-const mockQuery = pool.query as unknown as jest.Mock;
+import { User } from '../src/models';
 
 describe('POST /api/auth/login', () => {
   beforeEach(() => jest.clearAllMocks());
 
   it('returns 200 + token for valid credentials', async () => {
     const passwordHash = await bcrypt.hash('admin123', 4);
-    mockQuery.mockResolvedValue({
-      rows: [{ id: 1, email: 'admin@test.com', password_hash: passwordHash, name: 'Admin', role: 'admin' }],
+    (User.findOne as jest.Mock).mockResolvedValue({
+      id: '1',
+      email: 'admin@test.com',
+      password_hash: passwordHash,
+      name: 'Admin',
+      role: 'admin',
     });
 
     const res = await request(app)
@@ -39,8 +44,12 @@ describe('POST /api/auth/login', () => {
 
   it('returns 401 for wrong password', async () => {
     const passwordHash = await bcrypt.hash('admin123', 4);
-    mockQuery.mockResolvedValue({
-      rows: [{ id: 1, email: 'admin@test.com', password_hash: passwordHash, name: 'Admin', role: 'admin' }],
+    (User.findOne as jest.Mock).mockResolvedValue({
+      id: '1',
+      email: 'admin@test.com',
+      password_hash: passwordHash,
+      name: 'Admin',
+      role: 'admin',
     });
 
     const res = await request(app)
@@ -51,7 +60,7 @@ describe('POST /api/auth/login', () => {
   });
 
   it('returns 401 for non-existing email', async () => {
-    mockQuery.mockResolvedValue({ rows: [] });
+    (User.findOne as jest.Mock).mockResolvedValue(null);
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'noone@test.com', password: 'whatever' });
@@ -71,14 +80,14 @@ describe('POST /api/auth/login', () => {
   });
 });
 
-describe('Protected route /api/products without token', () => {
-  it('returns 401 when no Authorization header is provided', async () => {
+describe('Protected /api/products without token', () => {
+  it('returns 401 when no Authorization header', async () => {
     const res = await request(app).get('/api/products');
     expect(res.status).toBe(401);
   });
 
-  it('returns 401 when Authorization header has invalid token', async () => {
-    const res = await request(app).get('/api/products').set('Authorization', 'Bearer fake.token.here');
+  it('returns 401 with invalid token', async () => {
+    const res = await request(app).get('/api/products').set('Authorization', 'Bearer fake.token');
     expect(res.status).toBe(401);
   });
 });

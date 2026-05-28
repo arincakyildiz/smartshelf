@@ -1,5 +1,5 @@
 export interface Product {
-  id: number;
+  id: string;
   name: string;
   sku: string;
   category: string;
@@ -8,16 +8,16 @@ export interface Product {
 }
 
 export interface Store {
-  id: number;
+  id: string;
   name: string;
   city: string;
   is_active: boolean;
 }
 
 export interface InventoryItem {
-  id: number;
-  store_id: number;
-  product_id: number;
+  id: string;
+  store_id: string;
+  product_id: string;
   quantity: number;
   store_name: string;
   store_city: string;
@@ -34,12 +34,26 @@ export interface DashboardStats {
   critical_stock: number;
   low_stock: number;
   normal_stock: number;
+  excess_stock: number;
+}
+
+export interface ExcessStore {
+  store_id: string;
+  store_name: string;
+  store_city: string;
+  total_quantity: number;
+  excess_product_count: number;
+}
+
+export interface ProductWithStock extends Product {
+  total_stock: number;
+  store_count: number;
 }
 
 export interface StockRequest {
-  id: number;
-  requesting_store_id: number;
-  product_id: number;
+  id: string;
+  requesting_store_id: string;
+  product_id: string;
   quantity_needed: number;
   status: 'pending' | 'fulfilled' | 'cancelled';
   created_at: string;
@@ -49,9 +63,11 @@ export interface StockRequest {
 }
 
 export interface MatchResult {
-  source_store_id: number;
-  source_store_name: string;
-  source_store_city: string;
+  source_store_id: string;
+  source_store_name?: string;
+  store_name?: string;
+  source_store_city?: string;
+  store_city?: string;
   available_quantity: number;
   score: number;
   reasons: string[];

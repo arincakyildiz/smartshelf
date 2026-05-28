@@ -1,9 +1,9 @@
 import request from 'supertest';
-import { app } from '../src/index';
 
 jest.mock('../src/config/database', () => ({
   __esModule: true,
-  default: { query: jest.fn() },
+  connectDatabase: jest.fn().mockResolvedValue(undefined),
+  default: {},
 }));
 jest.mock('../src/config/redis', () => ({
   __esModule: true,
@@ -14,16 +14,30 @@ jest.mock('../src/middleware/auth', () => ({
   __esModule: true,
   authenticate: (_req: any, _res: any, next: any) => next(),
 }));
+jest.mock('../src/models', () => ({
+  __esModule: true,
+  Product: {
+    find:      jest.fn(),
+    findById:  jest.fn(),
+    create:    jest.fn(),
+    findByIdAndUpdate: jest.fn(),
+    findByIdAndDelete: jest.fn(),
+  },
+  Store: {}, Inventory: {}, User: {}, StockRequest: {}, MatchResult: {},
+}));
 
-import pool from '../src/config/database';
-const mockQuery = pool.query as unknown as jest.Mock;
+import { app } from '../src/index';
+import { Product } from '../src/models';
+
+const sample = { id: '1', name: 'Test Ürün', sku: 'SKU-001', category: 'Elektronik', price: 100 };
 
 describe('GET /api/products', () => {
-  it('returns product list', async () => {
-    mockQuery.mockResolvedValue({
-      rows: [{ id: 1, name: 'Test Ürün', sku: 'SKU-001', category: 'Elektronik', price: 100 }],
-    });
+  beforeEach(() => jest.clearAllMocks());
 
+  it('returns product list', async () => {
+    (Product.find as jest.Mock).mockReturnValue({
+      sort: jest.fn().mockResolvedValue([sample]),
+    });
     const res = await request(app).get('/api/products');
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(1);
@@ -32,13 +46,14 @@ describe('GET /api/products', () => {
 });
 
 describe('POST /api/products', () => {
-  it('creates a product', async () => {
-    const product = { name: 'Yeni Ürün', sku: 'SKU-999', category: 'Test', price: 50 };
-    mockQuery.mockResolvedValue({ rows: [{ id: 99, ...product }] });
+  beforeEach(() => jest.clearAllMocks());
 
-    const res = await request(app).post('/api/products').send(product);
+  it('creates a product', async () => {
+    const newProduct = { name: 'Yeni', sku: 'SKU-999', category: 'Test', price: 50 };
+    (Product.create as jest.Mock).mockResolvedValue({ id: '99', ...newProduct });
+    const res = await request(app).post('/api/products').send(newProduct);
     expect(res.status).toBe(201);
-    expect(res.body.id).toBe(99);
+    expect(res.body.id).toBe('99');
   });
 
   it('rejects invalid product', async () => {
