@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { Store } from '../models';
+import { Store, Inventory, Transfer, StockRequest, User } from '../models';
 import { cache } from '../config/redis';
 
 const CACHE_KEY = 'stores:all';
@@ -49,6 +49,60 @@ export async function updateStore(req: Request, res: Response): Promise<void> {
     res.status(404).json({ error: 'Mağaza bulunamadı' });
     return;
   }
+  await cache.delPattern('inventory:*');
   await cache.del(CACHE_KEY);
   res.json(store);
+}
+
+export async function deleteStore(req: Request, res: Response): Promise<void> {
+  const storeId = req.params.id;
+
+  // Bagimli kayit kontrolu
+  const [invCount, transferCount, requestCount, userCount] = await Promise.all([
+    Inventory.countDocuments({ store_id: storeId }),
+    Transfer.countDocuments({
+      $or: [{ source_store_id: storeId }, { target_store_id: storeId }],
+    }),
+    StockRequest.countDocuments({ requesting_store_id: storeId }),
+    User.countDocuments({ store_id: storeId }),
+  ]);
+
+  const force = req.query.force === 'true';
+
+  if (!force && (invCount > 0 || transferCount > 0 || requestCount > 0 || userCount > 0)) {
+    res.status(409).json({
+      error: 'Mağazada bağlı kayıtlar var. Soft-delete (pasif yap) öneriliyor.',
+      details: {
+        inventory_rows: invCount,
+        transfers: transferCount,
+        requests: requestCount,
+        users: userCount,
+      },
+      hint: 'Yine de silmek için ?force=true ekleyin (cascade delete yapılır)',
+    });
+    return;
+  }
+
+  if (force) {
+    // Cascade delete
+    await Promise.all([
+      Inventory.deleteMany({ store_id: storeId }),
+      Transfer.deleteMany({
+        $or: [{ source_store_id: storeId }, { target_store_id: storeId }],
+      }),
+      StockRequest.deleteMany({ requesting_store_id: storeId }),
+      User.updateMany({ store_id: storeId }, { $unset: { store_id: '' } }),
+    ]);
+  }
+
+  const deleted = await Store.findByIdAndDelete(storeId);
+  if (!deleted) {
+    res.status(404).json({ error: 'Mağaza bulunamadı' });
+    return;
+  }
+
+  await cache.delPattern('inventory:*');
+  await cache.del(CACHE_KEY);
+  await cache.del('dashboard:stats');
+  res.status(204).send();
 }
