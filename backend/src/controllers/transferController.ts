@@ -160,15 +160,12 @@ export async function updateTransfer(req: Request, res: Response): Promise<void>
       src.quantity -= transfer.quantity;
       await src.save();
 
+      // Target inventory: var ise $inc, yoksa create (atomic upsert)
       const tgt = await Inventory.findOneAndUpdate(
         { store_id: transfer.target_store_id, product_id: transfer.product_id },
-        { $inc: { quantity: transfer.quantity }, $setOnInsert: { quantity: transfer.quantity } },
-        { upsert: false, new: true }
-      ) || await Inventory.create({
-        store_id: transfer.target_store_id,
-        product_id: transfer.product_id,
-        quantity: transfer.quantity,
-      });
+        { $inc: { quantity: transfer.quantity }, $set: { updated_at: new Date() } },
+        { upsert: true, new: true, setDefaultsOnInsert: true }
+      );
       const tgtNew = tgt.quantity;
       const tgtOld = tgtNew - transfer.quantity;
 

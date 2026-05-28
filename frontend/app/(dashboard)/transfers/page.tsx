@@ -65,13 +65,28 @@ export default function TransfersPage() {
   const fetchAll = fetchTransfers;
 
   async function handleAction(id: string, action: 'approve' | 'reject' | 'complete') {
-    const label = action === 'approve' ? 'onaylanıyor' : action === 'reject' ? 'reddediliyor' : 'tamamlanıyor';
     try {
       await api.patch(`/transfers/${id}`, { action });
-      toast.success(`Transfer ${label === 'onaylanıyor' ? 'onaylandı' : label === 'reddediliyor' ? 'reddedildi' : 'tamamlandı'}`);
-      fetchAll();
+      const successMsg =
+        action === 'approve'  ? 'Transfer onaylandı' :
+        action === 'reject'   ? 'Transfer reddedildi' :
+                                'Transfer tamamlandı';
+      toast.success(successMsg);
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'İşlem başarısız');
+      const msg = err.response?.data?.error;
+      const status = err.response?.status;
+      if (msg) {
+        toast.error(msg);
+      } else if (status === 403) {
+        toast.error('Bu işlem için admin yetkisi gerekli');
+      } else if (status === 404) {
+        toast.error('Transfer bulunamadı (sayfa yenilenecek)');
+      } else {
+        toast.error('İşlem başarısız');
+      }
+    } finally {
+      // Her durumda yenile - basari/hata fark etmez, UI guncel kalsin
+      fetchTransfers();
     }
   }
 
