@@ -3,8 +3,12 @@ import request from 'supertest';
 process.env.JWT_SECRET = 'test-secret';
 process.env.JWT_EXPIRES_IN = '1h';
 
-jest.mock('../src/config/database', () => ({ default: { query: jest.fn() } }));
+jest.mock('../src/config/database', () => ({
+  __esModule: true,
+  default: { query: jest.fn() },
+}));
 jest.mock('../src/config/redis', () => ({
+  __esModule: true,
   cache: { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn(), delPattern: jest.fn() },
   default: { on: jest.fn() },
 }));
@@ -13,7 +17,7 @@ import bcrypt from 'bcryptjs';
 import pool from '../src/config/database';
 import { app } from '../src/index';
 
-const mockQuery = pool.query as jest.Mock;
+const mockQuery = pool.query as unknown as jest.Mock;
 
 describe('POST /api/auth/login', () => {
   beforeEach(() => jest.clearAllMocks());

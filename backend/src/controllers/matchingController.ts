@@ -44,6 +44,7 @@ export async function createMatchRequest(req: Request, res: Response): Promise<v
       "UPDATE stock_requests SET status = 'fulfilled' WHERE id = $1",
       [stockRequest.rows[0].id]
     );
+    stockRequest.rows[0].status = 'fulfilled';
   }
 
   res.status(201).json({

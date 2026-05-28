@@ -1,13 +1,24 @@
-import Redis from 'ioredis';
+/**
+ * If `USE_INMEMORY_REDIS=true`, use ioredis-mock (in-process).
+ * Otherwise connect to the real Redis via REDIS_URL.
+ */
+let redis: any;
 
-const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
-  lazyConnect: true,
-  retryStrategy: (times) => Math.min(times * 50, 2000),
-});
-
-redis.on('error', (err) => {
-  console.warn('Redis error (non-fatal):', err.message);
-});
+if (process.env.USE_INMEMORY_REDIS === 'true') {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const RedisMock = require('ioredis-mock');
+  redis = new RedisMock();
+  console.log('[Cache] Using in-memory Redis (ioredis-mock)');
+} else {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Redis = require('ioredis');
+  redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', {
+    lazyConnect: true,
+    retryStrategy: (times: number) => Math.min(times * 50, 2000),
+  });
+  redis.on('error', (err: Error) => console.warn('Redis error (non-fatal):', err.message));
+  console.log('[Cache] Using Redis at', process.env.REDIS_URL);
+}
 
 export const cache = {
   async get<T>(key: string): Promise<T | null> {

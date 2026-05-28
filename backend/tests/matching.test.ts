@@ -1,11 +1,12 @@
 import { findMatches } from '../src/services/matchingService';
 
 jest.mock('../src/config/database', () => ({
+  __esModule: true,
   default: { query: jest.fn() },
 }));
 
 import pool from '../src/config/database';
-const mockQuery = pool.query as jest.Mock;
+const mockQuery = pool.query as unknown as jest.Mock;
 
 describe('matchingService – findMatches()', () => {
   beforeEach(() => jest.clearAllMocks());

@@ -2,18 +2,21 @@ import request from 'supertest';
 import { app } from '../src/index';
 
 jest.mock('../src/config/database', () => ({
+  __esModule: true,
   default: { query: jest.fn() },
 }));
 jest.mock('../src/config/redis', () => ({
-  cache: { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn() },
+  __esModule: true,
+  cache: { get: jest.fn().mockResolvedValue(null), set: jest.fn(), del: jest.fn(), delPattern: jest.fn() },
   default: { on: jest.fn() },
 }));
 jest.mock('../src/middleware/auth', () => ({
+  __esModule: true,
   authenticate: (_req: any, _res: any, next: any) => next(),
 }));
 
 import pool from '../src/config/database';
-const mockQuery = pool.query as jest.Mock;
+const mockQuery = pool.query as unknown as jest.Mock;
 
 describe('GET /api/products', () => {
   it('returns product list', async () => {
