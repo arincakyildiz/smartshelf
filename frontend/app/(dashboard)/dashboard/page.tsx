@@ -5,6 +5,7 @@ import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { DashboardStats, ExcessStore, InventoryItem } from '@/types';
+import { StockDistributionChart, StoreComparisonChart } from '@/components/dashboard/Charts';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
 
@@ -82,6 +83,14 @@ export default function DashboardPage() {
         <StatCard label="Normal Stok" value={stats?.normal_stock ?? 0} color="bg-green-500"
           icon={<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />} />
       </div>
+
+      {/* Charts */}
+      {stats && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <StockDistributionChart stats={stats} />
+          <StoreComparisonChart excessStores={excessStores} />
+        </div>
+      )}
 
       {/* Two-column: Critical + Excess Stores */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mb-6">

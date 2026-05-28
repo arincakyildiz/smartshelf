@@ -9,9 +9,10 @@ export function authenticate(req: Request, res: Response, next: NextFunction): v
   }
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET!) as {
-      id: number;
+      id: string;
       email: string;
       role: string;
+      store_id?: string;
     };
     req.user = payload;
     next();

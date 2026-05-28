@@ -12,8 +12,9 @@ jest.mock('../src/config/redis', () => ({
 }));
 jest.mock('../src/models', () => ({
   __esModule: true,
-  User: { findOne: jest.fn(), findById: jest.fn() },
+  User: { findOne: jest.fn(), findById: jest.fn(), create: jest.fn() },
   Product: {}, Store: {}, Inventory: {}, StockRequest: {}, MatchResult: {},
+  Transfer: {}, InventoryHistory: {},
 }));
 
 import bcrypt from 'bcryptjs';

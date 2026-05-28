@@ -24,6 +24,7 @@ jest.mock('../src/models', () => ({
     findByIdAndDelete: jest.fn(),
   },
   Store: {}, Inventory: {}, User: {}, StockRequest: {}, MatchResult: {},
+  Transfer: {}, InventoryHistory: {},
 }));
 
 import { app } from '../src/index';

@@ -9,6 +9,41 @@ const loginSchema = z.object({
   password: z.string().min(6),
 });
 
+const registerSchema = z.object({
+  email:    z.string().email(),
+  password: z.string().min(6),
+  name:     z.string().min(2),
+  role:     z.enum(['admin', 'store_manager']).optional().default('store_manager'),
+  store_id: z.string().optional(),
+});
+
+export async function register(req: Request, res: Response): Promise<void> {
+  const parsed = registerSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: 'Geçersiz istek', details: parsed.error.issues });
+    return;
+  }
+  const { email, password, name, role, store_id } = parsed.data;
+
+  if (role === 'store_manager' && !store_id) {
+    res.status(400).json({ error: 'Store manager için store_id zorunlu' });
+    return;
+  }
+
+  const existing = await User.findOne({ email });
+  if (existing) {
+    res.status(409).json({ error: 'Bu e-posta zaten kayıtlı' });
+    return;
+  }
+
+  const password_hash = await bcrypt.hash(password, 10);
+  const user = await User.create({ email, password_hash, name, role, store_id });
+
+  res.status(201).json({
+    id: user.id, email: user.email, name: user.name, role: user.role, store_id: user.store_id,
+  });
+}
+
 export async function login(req: Request, res: Response): Promise<void> {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
@@ -33,14 +68,17 @@ export async function login(req: Request, res: Response): Promise<void> {
     expiresIn: (process.env.JWT_EXPIRES_IN || '7d') as SignOptions['expiresIn'],
   };
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    { id: user.id, email: user.email, role: user.role, store_id: user.store_id?.toString() },
     process.env.JWT_SECRET!,
     signOptions
   );
 
   res.json({
     token,
-    user: { id: user.id, email: user.email, name: user.name, role: user.role },
+    user: {
+      id: user.id, email: user.email, name: user.name, role: user.role,
+      store_id: user.store_id?.toString(),
+    },
   });
 }
 

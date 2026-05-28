@@ -68,7 +68,7 @@ export function getStockLevel(quantity: number): StockLevel {
 declare global {
   namespace Express {
     interface Request {
-      user?: { id: number; email: string; role: string };
+      user?: { id: string; email: string; role: string; store_id?: string };
     }
   }
 }

@@ -11,11 +11,14 @@ mongoose.set('toJSON', {
 });
 
 // ─── User ─────────────────────────────────────────────────────────────────────
+export type UserRole = 'admin' | 'store_manager';
+
 export interface UserDoc extends Document {
   email: string;
   password_hash: string;
   name: string;
-  role: string;
+  role: UserRole;
+  store_id?: mongoose.Types.ObjectId;  // only for store_manager
   created_at: Date;
 }
 
@@ -24,7 +27,8 @@ const userSchema = new Schema<UserDoc>(
     email:         { type: String, required: true, unique: true, index: true },
     password_hash: { type: String, required: true },
     name:          { type: String, required: true },
-    role:          { type: String, default: 'admin' },
+    role:          { type: String, enum: ['admin', 'store_manager'], default: 'admin' },
+    store_id:      { type: Schema.Types.ObjectId, ref: 'Store' },
     created_at:    { type: Date, default: Date.now },
   },
   { collection: 'users' }
@@ -147,3 +151,73 @@ const matchResultSchema = new Schema<MatchResultDoc>(
 );
 
 export const MatchResult = model<MatchResultDoc>('MatchResult', matchResultSchema);
+
+// ─── Inventory History (audit log) ────────────────────────────────────────────
+export type ActionType = 'STOCK_ADDED' | 'TRANSFER_SENT' | 'TRANSFER_RECEIVED' | 'MANUAL_UPDATE' | 'SALE';
+
+export interface InventoryHistoryDoc extends Document {
+  store_id: mongoose.Types.ObjectId;
+  product_id: mongoose.Types.ObjectId;
+  action_type: ActionType;
+  quantity_changed: number;
+  previous_quantity: number;
+  new_quantity: number;
+  reason?: string;
+  actor_id?: mongoose.Types.ObjectId;
+  related_transfer_id?: mongoose.Types.ObjectId;
+  created_at: Date;
+}
+
+const inventoryHistorySchema = new Schema<InventoryHistoryDoc>(
+  {
+    store_id:           { type: Schema.Types.ObjectId, ref: 'Store',   required: true, index: true },
+    product_id:         { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
+    action_type:        { type: String, enum: ['STOCK_ADDED', 'TRANSFER_SENT', 'TRANSFER_RECEIVED', 'MANUAL_UPDATE', 'SALE'], required: true },
+    quantity_changed:   { type: Number, required: true },
+    previous_quantity:  { type: Number, required: true },
+    new_quantity:       { type: Number, required: true },
+    reason:             { type: String },
+    actor_id:           { type: Schema.Types.ObjectId, ref: 'User' },
+    related_transfer_id:{ type: Schema.Types.ObjectId, ref: 'Transfer' },
+    created_at:         { type: Date, default: Date.now, index: true },
+  },
+  { collection: 'inventory_history' }
+);
+
+export const InventoryHistory = model<InventoryHistoryDoc>('InventoryHistory', inventoryHistorySchema);
+
+// ─── Transfer ─────────────────────────────────────────────────────────────────
+export type TransferStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+
+export interface TransferDoc extends Document {
+  source_store_id: mongoose.Types.ObjectId;
+  target_store_id: mongoose.Types.ObjectId;
+  product_id: mongoose.Types.ObjectId;
+  quantity: number;
+  status: TransferStatus;
+  notes?: string;
+  created_by?: mongoose.Types.ObjectId;
+  approved_by?: mongoose.Types.ObjectId;
+  approved_at?: Date;
+  completed_at?: Date;
+  created_at: Date;
+}
+
+const transferSchema = new Schema<TransferDoc>(
+  {
+    source_store_id: { type: Schema.Types.ObjectId, ref: 'Store',   required: true, index: true },
+    target_store_id: { type: Schema.Types.ObjectId, ref: 'Store',   required: true, index: true },
+    product_id:      { type: Schema.Types.ObjectId, ref: 'Product', required: true, index: true },
+    quantity:        { type: Number, required: true, min: 1 },
+    status:          { type: String, enum: ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED'], default: 'PENDING', index: true },
+    notes:           { type: String },
+    created_by:      { type: Schema.Types.ObjectId, ref: 'User' },
+    approved_by:     { type: Schema.Types.ObjectId, ref: 'User' },
+    approved_at:     { type: Date },
+    completed_at:    { type: Date },
+    created_at:      { type: Date, default: Date.now, index: true },
+  },
+  { collection: 'transfers' }
+);
+
+export const Transfer = model<TransferDoc>('Transfer', transferSchema);

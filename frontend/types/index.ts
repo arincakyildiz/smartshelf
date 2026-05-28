@@ -62,6 +62,45 @@ export interface StockRequest {
   sku?: string;
 }
 
+export type TransferStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'COMPLETED';
+
+export interface Transfer {
+  id: string;
+  source_store_id: string;
+  source_store_name: string;
+  source_store_city: string;
+  target_store_id: string;
+  target_store_name: string;
+  target_store_city: string;
+  product_id: string;
+  product_name: string;
+  product_sku: string;
+  quantity: number;
+  status: TransferStatus;
+  notes?: string;
+  created_at: string;
+  approved_at?: string;
+  completed_at?: string;
+}
+
+export type ActionType = 'STOCK_ADDED' | 'TRANSFER_SENT' | 'TRANSFER_RECEIVED' | 'MANUAL_UPDATE' | 'SALE';
+
+export interface InventoryHistoryItem {
+  id: string;
+  store_id: string;
+  store_name: string;
+  product_id: string;
+  product_name: string;
+  product_sku: string;
+  action_type: ActionType;
+  quantity_changed: number;
+  previous_quantity: number;
+  new_quantity: number;
+  reason?: string;
+  actor_name?: string;
+  created_at: string;
+}
+
 export interface MatchResult {
   source_store_id: string;
   source_store_name?: string;

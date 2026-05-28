@@ -26,6 +26,14 @@ const nav = [
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
   )},
+  { href: '/transfers', label: 'Transferler', icon: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
+  )},
+  { href: '/history', label: 'Geçmiş', icon: (
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+  )},
 ];
 
 export default function Sidebar() {

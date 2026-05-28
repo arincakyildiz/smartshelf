@@ -1,9 +1,10 @@
 import { Request, Response } from 'express';
 import { z } from 'zod';
 import { Server as SocketServer } from 'socket.io';
-import { Inventory, Product, Store } from '../models';
+import { Inventory, Product, Store, InventoryHistory } from '../models';
 import { cache } from '../config/redis';
 import { getStockLevel } from '../types';
+import { logInventoryChange } from '../services/historyService';
 
 let io: SocketServer | null = null;
 export function setSocketServer(socketIO: SocketServer): void {
@@ -149,6 +150,42 @@ export async function getProductsWithStock(req: Request, res: Response): Promise
   res.json(rows);
 }
 
+// GET /api/inventory/history?store_id=&product_id=&limit=
+export async function getInventoryHistory(req: Request, res: Response): Promise<void> {
+  const { store_id, product_id } = req.query as Record<string, string | undefined>;
+  const limit = Math.min(parseInt((req.query.limit as string) || '50'), 200);
+
+  const filter: any = {};
+  if (store_id)   filter.store_id   = store_id;
+  if (product_id) filter.product_id = product_id;
+
+  const rows = await InventoryHistory.find(filter)
+    .populate<{ store_id: any }>('store_id', 'name city')
+    .populate<{ product_id: any }>('product_id', 'name sku')
+    .populate<{ actor_id: any }>('actor_id', 'name email')
+    .sort({ created_at: -1 })
+    .limit(limit)
+    .lean();
+
+  const mapped = rows.map((r: any) => ({
+    id:                  r._id.toString(),
+    store_id:            r.store_id?._id?.toString(),
+    store_name:          r.store_id?.name,
+    product_id:          r.product_id?._id?.toString(),
+    product_name:        r.product_id?.name,
+    product_sku:         r.product_id?.sku,
+    action_type:         r.action_type,
+    quantity_changed:    r.quantity_changed,
+    previous_quantity:   r.previous_quantity,
+    new_quantity:        r.new_quantity,
+    reason:              r.reason,
+    actor_name:          r.actor_id?.name,
+    created_at:          r.created_at,
+  }));
+
+  res.json(mapped);
+}
+
 // PATCH /api/inventory/:store_id/:product_id
 export async function updateInventory(req: Request, res: Response): Promise<void> {
   const { store_id, product_id } = req.params;
@@ -159,11 +196,26 @@ export async function updateInventory(req: Request, res: Response): Promise<void
   }
   const { quantity } = parsed.data;
 
+  const existing = await Inventory.findOne({ store_id, product_id });
+  const previousQuantity = existing?.quantity ?? 0;
+
   const row = await Inventory.findOneAndUpdate(
     { store_id, product_id },
     { quantity, updated_at: new Date() },
     { upsert: true, new: true, setDefaultsOnInsert: true }
   );
+
+  // Audit log
+  if (previousQuantity !== quantity) {
+    await logInventoryChange({
+      store_id, product_id,
+      action_type: 'MANUAL_UPDATE',
+      previous_quantity: previousQuantity,
+      new_quantity: quantity,
+      reason: req.body.reason,
+      actor_id: req.user?.id,
+    });
+  }
 
   await cache.delPattern('inventory:*');
   await cache.del('dashboard:stats');
