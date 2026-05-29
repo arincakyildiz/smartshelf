@@ -1,9 +1,12 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { InventoryItem, Store } from '@/types';
+
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
 
 const LEVEL_MAP = {
   critical: { label: 'Kritik', cls: 'badge-critical' },
@@ -19,7 +22,7 @@ export default function InventoryPage() {
   const [editRow, setEditRow] = useState<InventoryItem | null>(null);
   const [newQty, setNewQty] = useState('');
 
-  async function fetchInventory() {
+  const fetchInventory = useCallback(async () => {
     try {
       const params = selectedStore ? `?store_id=${selectedStore}` : '';
       const { data } = await api.get(`/inventory${params}`);
@@ -29,7 +32,7 @@ export default function InventoryPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [selectedStore]);
 
   useEffect(() => {
     api.get('/stores').then(({ data }) => {
@@ -37,7 +40,14 @@ export default function InventoryPage() {
     });
   }, []);
 
-  useEffect(() => { fetchInventory(); }, [selectedStore]);
+  useEffect(() => { fetchInventory(); }, [fetchInventory]);
+
+  // Real-time: stok güncellemelerinde otomatik yenile
+  useEffect(() => {
+    const socket = io(WS_URL, { auth: { token: localStorage.getItem('token') } });
+    socket.on('inventory:update', () => fetchInventory());
+    return () => { socket.disconnect(); };
+  }, [fetchInventory]);
 
   async function handleUpdate(item: InventoryItem) {
     const qty = Number(newQty);

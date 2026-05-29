@@ -1,4 +1,4 @@
-import { requireRole, enforceStoreScope } from '../src/middleware/role';
+import { requireRole, enforceStoreScope, canAccessStore } from '../src/middleware/role';
 
 function mockRes() {
   return {
@@ -74,5 +74,28 @@ describe('enforceStoreScope()', () => {
     enforceStoreScope((r) => r.params.store_id)(req, res, next);
     expect(res.status).toHaveBeenCalledWith(403);
     expect(next).not.toHaveBeenCalled();
+  });
+});
+
+describe('canAccessStore()', () => {
+  it('admin can access any store', () => {
+    expect(canAccessStore({ role: 'admin' }, 'any-store')).toBe(true);
+    expect(canAccessStore({ role: 'admin' }, undefined)).toBe(true);
+  });
+
+  it('store_manager can access own store', () => {
+    expect(canAccessStore({ role: 'store_manager', store_id: 's1' }, 's1')).toBe(true);
+  });
+
+  it('store_manager cannot access another store', () => {
+    expect(canAccessStore({ role: 'store_manager', store_id: 's1' }, 's2')).toBe(false);
+  });
+
+  it('store_manager without target store is denied', () => {
+    expect(canAccessStore({ role: 'store_manager', store_id: 's1' }, undefined)).toBe(false);
+  });
+
+  it('undefined user is denied', () => {
+    expect(canAccessStore(undefined, 's1')).toBe(false);
   });
 });

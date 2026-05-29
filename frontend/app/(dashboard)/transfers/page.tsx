@@ -1,10 +1,13 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
+import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { Transfer, TransferStatus, Store, Product } from '@/types';
 import Pagination from '@/components/ui/Pagination';
+
+const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
 
 const STATUS_MAP: Record<TransferStatus, { label: string; cls: string }> = {
   PENDING:   { label: 'Beklemede',    cls: 'bg-yellow-100 text-yellow-700' },
@@ -61,6 +64,16 @@ export default function TransfersPage() {
 
   useEffect(() => { fetchTransfers(); }, [fetchTransfers]);
   useEffect(() => { setPage(1); }, [filterStatus, filterStore]);
+
+  // Real-time: transfer ve stok değişikliklerinde otomatik yenile
+  useEffect(() => {
+    const socket = io(WS_URL, { auth: { token: localStorage.getItem('token') } });
+    const refetch = () => fetchTransfers();
+    socket.on('transfer:created', refetch);
+    socket.on('transfer:status', refetch);
+    socket.on('inventory:update', refetch);
+    return () => { socket.disconnect(); };
+  }, [fetchTransfers]);
 
   const fetchAll = fetchTransfers;
 

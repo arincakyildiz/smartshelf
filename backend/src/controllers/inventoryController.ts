@@ -5,6 +5,7 @@ import { Inventory, Product, Store, InventoryHistory } from '../models';
 import { cache } from '../config/redis';
 import { getStockLevel } from '../types';
 import { logInventoryChange } from '../services/historyService';
+import { canAccessStore } from '../middleware/role';
 import { parsePagination, paginated } from '../utils/paginate';
 
 let io: SocketServer | null = null;
@@ -18,7 +19,13 @@ const patchSchema = z.object({
 
 // GET /api/inventory  (optionally ?store_id=)
 export async function getInventory(req: Request, res: Response): Promise<void> {
-  const storeId = req.query.store_id as string | undefined;
+  let storeId = req.query.store_id as string | undefined;
+
+  // store_manager yalnızca kendi mağazasını görebilir — filtreyi zorla
+  if (req.user?.role !== 'admin' && req.user?.store_id) {
+    storeId = req.user.store_id;
+  }
+
   const cacheKey = storeId ? `inventory:store:${storeId}` : 'inventory:all';
 
   const cached = await cache.get(cacheKey);
@@ -194,6 +201,13 @@ export async function getInventoryHistory(req: Request, res: Response): Promise<
 // PATCH /api/inventory/:store_id/:product_id
 export async function updateInventory(req: Request, res: Response): Promise<void> {
   const { store_id, product_id } = req.params;
+
+  // store_manager yalnızca kendi mağazasının stoğunu güncelleyebilir
+  if (!canAccessStore(req.user, store_id)) {
+    res.status(403).json({ error: 'Sadece kendi mağazanızın stoğunu güncelleyebilirsiniz' });
+    return;
+  }
+
   const parsed = patchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: 'Geçersiz miktar' });

@@ -20,6 +20,18 @@ export function requireRole(...allowed: string[]) {
 }
 
 /**
+ * True if the user may act on the given store.
+ * Admins can access any store; store managers only their own.
+ */
+export function canAccessStore(
+  user: { role: string; store_id?: string } | undefined,
+  storeId: string | undefined
+): boolean {
+  if (user?.role === 'admin') return true;
+  return !!storeId && user?.store_id === storeId;
+}
+
+/**
  * Store manager can only access their own store.
  * Reads `:store_id` param, query.store_id, or body.store_id.
  */

@@ -5,6 +5,7 @@ import { Server as SocketServer } from 'socket.io';
 import { Transfer, Inventory } from '../models';
 import { cache } from '../config/redis';
 import { logInventoryChange } from '../services/historyService';
+import { canAccessStore } from '../middleware/role';
 import { parsePagination, parseSort, paginated } from '../utils/paginate';
 
 let io: SocketServer | null = null;
@@ -41,6 +42,12 @@ export async function createTransfer(req: Request, res: Response): Promise<void>
 
   if (source_store_id === target_store_id) {
     res.status(400).json({ error: 'Kaynak ve hedef mağaza aynı olamaz' });
+    return;
+  }
+
+  // store_manager yalnızca kendi mağazasından transfer talebi açabilir
+  if (!canAccessStore(req.user, source_store_id)) {
+    res.status(403).json({ error: 'Sadece kendi mağazanızdan transfer talebi oluşturabilirsiniz' });
     return;
   }
 
