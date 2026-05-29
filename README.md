@@ -14,7 +14,7 @@ Bir mağazada stok bittiğinde, aynı ürünü elinde bulunduran diğer mağazal
 | Cache | Redis (ioredis) | Redis yoksa ioredis-mock ile bellek içi fallback |
 | Kimlik doğrulama | JWT (Bearer) + bcrypt | Rol bazlı yetki (admin / store_manager) |
 | Gerçek zamanlı | Socket.io | Stok ve transfer değişikliklerinde canlı güncelleme |
-| Test | Jest + Supertest | 48 test, 5 suite |
+| Test | Jest + Supertest | 54 test, 6 suite |
 | API dokümantasyonu | Swagger (OpenAPI 3) | `/api-docs` altında |
 | Container | Docker + Docker Compose | |
 
@@ -138,7 +138,7 @@ cd backend
 npm test
 ```
 
-48 test, 5 suite halinde: eşleştirme algoritması, JWT giriş akışı, ürün CRUD, stok seviyesi sınırları ve rol/mağaza kapsamı kontrolü. Testler veritabanı ve Redis'i mock'lar, çalışan bir MongoDB gerektirmez.
+54 test, 6 suite halinde: eşleştirme algoritması, JWT giriş akışı, ürün CRUD, stok seviyesi sınırları, rol/mağaza kapsamı kontrolü ve hata yönetimi (async hata iletimi + Mongoose hata eşleme). Testler veritabanı ve Redis'i mock'lar, çalışan bir MongoDB gerektirmez.
 
 ## Referans tablolar
 

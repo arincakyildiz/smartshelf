@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth';
+import { asyncHandler } from '../utils/asyncHandler';
 import {
   getInventory, updateInventory, getDashboardStats,
   getExcessStores, getProductsWithStock, getInventoryHistory,
@@ -8,11 +9,11 @@ import {
 const router = Router();
 
 router.use(authenticate);
-router.get('/', getInventory);
-router.get('/stats', getDashboardStats);
-router.get('/excess-stores', getExcessStores);
-router.get('/products-with-stock', getProductsWithStock);
-router.get('/history', getInventoryHistory);
-router.patch('/:store_id/:product_id', updateInventory);
+router.get('/', asyncHandler(getInventory));
+router.get('/stats', asyncHandler(getDashboardStats));
+router.get('/excess-stores', asyncHandler(getExcessStores));
+router.get('/products-with-stock', asyncHandler(getProductsWithStock));
+router.get('/history', asyncHandler(getInventoryHistory));
+router.patch('/:store_id/:product_id', asyncHandler(updateInventory));
 
 export default router;
