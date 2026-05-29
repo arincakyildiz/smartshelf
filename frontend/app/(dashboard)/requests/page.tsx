@@ -37,12 +37,13 @@ export default function RequestsPage() {
     e.preventDefault();
     try {
       const { data } = await api.post('/match-request', {
-        requesting_store_id: Number(form.requesting_store_id),
-        product_id: Number(form.product_id),
+        requesting_store_id: form.requesting_store_id,
+        product_id: form.product_id,
         quantity_needed: Number(form.quantity_needed),
       });
       toast.success('Talep oluşturuldu');
       setShowModal(false);
+      setForm({ requesting_store_id: '', product_id: '', quantity_needed: '' });
       setMatchResult(data);
       fetchAll();
     } catch {
