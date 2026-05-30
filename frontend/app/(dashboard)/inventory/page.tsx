@@ -43,9 +43,13 @@ export default function InventoryPage() {
 
   useEffect(() => {
     api.get('/stores').then(({ data }) => {
-      setStores(Array.isArray(data) ? data : data.items);
+      const list: Store[] = Array.isArray(data) ? data : data.items;
+      setStores(list);
+      // Açılışta ilk mağazayı seç: böylece yeni eklenen ürünler de (stok satırı
+      // olmasa bile) hemen listelenir ve stok girilebilir.
+      setSelectedStore((prev) => prev || list[0]?.id || '');
     });
-    api.get('/products?limit=1000').then(({ data }) => {
+    api.get('/products').then(({ data }) => {
       setProducts(Array.isArray(data) ? data : data.items);
     });
   }, []);
