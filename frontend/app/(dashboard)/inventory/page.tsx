@@ -5,16 +5,18 @@ import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { InventoryItem, Store } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
 
 const LEVEL_MAP = {
-  critical: { label: 'Kritik', cls: 'badge-critical' },
-  low:      { label: 'Düşük',  cls: 'badge-low' },
-  normal:   { label: 'Normal', cls: 'badge-normal' },
+  critical: { labelKey: 'inventory.levelCritical', cls: 'badge-critical' },
+  low:      { labelKey: 'inventory.levelLow',      cls: 'badge-low' },
+  normal:   { labelKey: 'inventory.levelNormal',   cls: 'badge-normal' },
 };
 
 export default function InventoryPage() {
+  const t = useT();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>('');
@@ -28,11 +30,11 @@ export default function InventoryPage() {
       const { data } = await api.get(`/inventory${params}`);
       setInventory(data);
     } catch {
-      toast.error('Stok verileri yüklenemedi');
+      toast.error(t('inventory.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [selectedStore]);
+  }, [selectedStore, t]);
 
   useEffect(() => {
     api.get('/stores').then(({ data }) => {
@@ -51,14 +53,14 @@ export default function InventoryPage() {
 
   async function handleUpdate(item: InventoryItem) {
     const qty = Number(newQty);
-    if (isNaN(qty) || qty < 0) { toast.error('Geçerli bir miktar girin'); return; }
+    if (isNaN(qty) || qty < 0) { toast.error(t('inventory.invalidQty')); return; }
     try {
       await api.patch(`/inventory/${item.store_id}/${item.product_id}`, { quantity: qty });
-      toast.success('Stok güncellendi');
+      toast.success(t('inventory.updated'));
       setEditRow(null);
       fetchInventory();
     } catch {
-      toast.error('Güncelleme başarısız');
+      toast.error(t('inventory.updateFailed'));
     }
   }
 
@@ -66,15 +68,15 @@ export default function InventoryPage() {
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Stok Yönetimi</h1>
-          <p className="text-gray-500 text-sm mt-1">Mağaza bazlı stok durumu</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('inventory.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('inventory.subtitle')}</p>
         </div>
         <select
           className="input w-56"
           value={selectedStore}
           onChange={(e) => setSelectedStore(e.target.value)}
         >
-          <option value="">Tüm Mağazalar</option>
+          <option value="">{t('inventory.allStores')}</option>
           {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
       </div>
@@ -88,12 +90,12 @@ export default function InventoryPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="text-left text-gray-500 border-b">
-                <th className="pb-3 font-medium">Ürün</th>
-                <th className="pb-3 font-medium">SKU</th>
-                <th className="pb-3 font-medium">Mağaza</th>
-                <th className="pb-3 font-medium">Şehir</th>
-                <th className="pb-3 font-medium">Miktar</th>
-                <th className="pb-3 font-medium">Durum</th>
+                <th className="pb-3 font-medium">{t('common.product')}</th>
+                <th className="pb-3 font-medium">{t('common.sku')}</th>
+                <th className="pb-3 font-medium">{t('common.store')}</th>
+                <th className="pb-3 font-medium">{t('common.city')}</th>
+                <th className="pb-3 font-medium">{t('common.qty')}</th>
+                <th className="pb-3 font-medium">{t('inventory.colStatus')}</th>
                 <th className="pb-3 font-medium"></th>
               </tr>
             </thead>
@@ -122,16 +124,16 @@ export default function InventoryPage() {
                       )}
                     </td>
                     <td className="py-3">
-                      <span className={level.cls}>{level.label}</span>
+                      <span className={level.cls}>{t(level.labelKey)}</span>
                     </td>
                     <td className="py-3 text-right space-x-2">
                       {isEditing ? (
                         <>
-                          <button onClick={() => handleUpdate(item)} className="text-green-600 hover:text-green-800 text-xs font-medium">Kaydet</button>
-                          <button onClick={() => setEditRow(null)} className="text-gray-400 hover:text-gray-600 text-xs">İptal</button>
+                          <button onClick={() => handleUpdate(item)} className="text-green-600 hover:text-green-800 text-xs font-medium">{t('common.save')}</button>
+                          <button onClick={() => setEditRow(null)} className="text-gray-400 hover:text-gray-600 text-xs">{t('common.cancel')}</button>
                         </>
                       ) : (
-                        <button onClick={() => { setEditRow(item); setNewQty(String(item.quantity)); }} className="text-navy-600 hover:text-navy-800 text-xs font-medium">Güncelle</button>
+                        <button onClick={() => { setEditRow(item); setNewQty(String(item.quantity)); }} className="text-navy-600 hover:text-navy-800 text-xs font-medium">{t('inventory.update')}</button>
                       )}
                     </td>
                   </tr>

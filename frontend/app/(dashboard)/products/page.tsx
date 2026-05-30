@@ -5,12 +5,14 @@ import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { Product } from '@/types';
 import Pagination from '@/components/ui/Pagination';
+import { useT, apiErrorMessage } from '@/lib/i18n';
 
 interface Row extends Product {}
 
 const LIMIT = 10;
 
 export default function ProductsPage() {
+  const t = useT();
   const [rows, setRows] = useState<Row[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
@@ -47,11 +49,11 @@ export default function ProductsPage() {
       setTotal(data.total);
       setTotalPages(data.total_pages);
     } catch {
-      toast.error('Ürünler yüklenemedi');
+      toast.error(t('products.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [page, search, category, sortBy, sortDir]);
+  }, [page, search, category, sortBy, sortDir, t]);
 
   // Initial: load categories
   useEffect(() => {
@@ -88,26 +90,26 @@ export default function ProductsPage() {
     try {
       if (editing) {
         await api.put(`/products/${editing.id}`, payload);
-        toast.success('Ürün güncellendi');
+        toast.success(t('products.updated'));
       } else {
         await api.post('/products', payload);
-        toast.success('Ürün eklendi');
+        toast.success(t('products.added'));
       }
       setShowModal(false);
       fetchProducts();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'İşlem başarısız');
+      toast.error(apiErrorMessage(t, err, 'products.actionFailed'));
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm('Bu ürünü silmek istiyor musunuz?')) return;
+    if (!confirm(t('products.confirmDelete'))) return;
     try {
       await api.delete(`/products/${id}`);
-      toast.success('Ürün silindi');
+      toast.success(t('products.deleted'));
       fetchProducts();
     } catch {
-      toast.error('Silme başarısız');
+      toast.error(t('products.deleteFailed'));
     }
   }
 
@@ -120,10 +122,10 @@ export default function ProductsPage() {
     <div className="p-4 sm:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ürünler</h1>
-          <p className="text-gray-500 text-sm mt-1">{total} ürün</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('products.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('products.count', { count: total })}</p>
         </div>
-        <button onClick={openCreate} className="btn-primary">+ Ürün Ekle</button>
+        <button onClick={openCreate} className="btn-primary">{t('products.add')}</button>
       </div>
 
       {/* Filters */}
@@ -138,13 +140,13 @@ export default function ProductsPage() {
             <input
               type="text"
               className="input pl-9"
-              placeholder="Ürün adı veya SKU ara..."
+              placeholder={t('products.searchPlaceholder')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
           <select className="input" value={category} onChange={(e) => setCategory(e.target.value)}>
-            <option value="">Tüm Kategoriler</option>
+            <option value="">{t('products.allCategories')}</option>
             {categories.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <select className="input" value={`${sortBy}:${sortDir}`}
@@ -153,12 +155,12 @@ export default function ProductsPage() {
               setSortBy(b);
               setSortDir(d as 'asc' | 'desc');
             }}>
-            <option value="created_at:desc">En yeni</option>
-            <option value="created_at:asc">En eski</option>
-            <option value="name:asc">İsim A-Z</option>
-            <option value="name:desc">İsim Z-A</option>
-            <option value="price:asc">Fiyat ↑</option>
-            <option value="price:desc">Fiyat ↓</option>
+            <option value="created_at:desc">{t('products.sortNewest')}</option>
+            <option value="created_at:asc">{t('products.sortOldest')}</option>
+            <option value="name:asc">{t('products.sortNameAsc')}</option>
+            <option value="name:desc">{t('products.sortNameDesc')}</option>
+            <option value="price:asc">{t('products.sortPriceAsc')}</option>
+            <option value="price:desc">{t('products.sortPriceDesc')}</option>
           </select>
         </div>
       </div>
@@ -170,7 +172,7 @@ export default function ProductsPage() {
           </div>
         ) : rows.length === 0 ? (
           <p className="text-center text-gray-500 py-8">
-            {search || category ? 'Filtreye uyan ürün yok' : 'Henüz ürün yok'}
+            {search || category ? t('products.noneFiltered') : t('products.none')}
           </p>
         ) : (
           <>
@@ -178,12 +180,12 @@ export default function ProductsPage() {
               <thead>
                 <tr className="text-left text-gray-500 border-b">
                   <th className="pb-3 font-medium cursor-pointer hover:text-navy-700" onClick={() => toggleSort('name')}>
-                    Ürün Adı {sortBy === 'name' && (sortDir === 'asc' ? '↑' : '↓')}
+                    {t('products.colName')} {sortBy === 'name' && (sortDir === 'asc' ? '↑' : '↓')}
                   </th>
-                  <th className="pb-3 font-medium">SKU</th>
-                  <th className="pb-3 font-medium">Kategori</th>
+                  <th className="pb-3 font-medium">{t('common.sku')}</th>
+                  <th className="pb-3 font-medium">{t('products.colCategory')}</th>
                   <th className="pb-3 font-medium cursor-pointer hover:text-navy-700" onClick={() => toggleSort('price')}>
-                    Fiyat {sortBy === 'price' && (sortDir === 'asc' ? '↑' : '↓')}
+                    {t('products.colPrice')} {sortBy === 'price' && (sortDir === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="pb-3 font-medium"></th>
                 </tr>
@@ -200,8 +202,8 @@ export default function ProductsPage() {
                     </td>
                     <td className="py-3 text-gray-700">₺{Number(p.price).toFixed(2)}</td>
                     <td className="py-3 text-right space-x-2 whitespace-nowrap">
-                      <button onClick={() => openEdit(p)} className="text-navy-600 hover:text-navy-800 text-xs font-medium">Düzenle</button>
-                      <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">Sil</button>
+                      <button onClick={() => openEdit(p)} className="text-navy-600 hover:text-navy-800 text-xs font-medium">{t('common.edit')}</button>
+                      <button onClick={() => handleDelete(p.id)} className="text-red-500 hover:text-red-700 text-xs font-medium">{t('common.delete')}</button>
                     </td>
                   </tr>
                 ))}
@@ -215,27 +217,27 @@ export default function ProductsPage() {
       {showModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
-            <h2 className="text-lg font-semibold mb-5">{editing ? 'Ürün Düzenle' : 'Yeni Ürün'}</h2>
+            <h2 className="text-lg font-semibold mb-5">{editing ? t('products.editTitle') : t('products.newTitle')}</h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Ürün Adı</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.colName')}</label>
                 <input className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">SKU</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.sku')}</label>
                 <input className="input font-mono" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.colCategory')}</label>
                 <input className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Fiyat (₺)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.fieldPrice')}</label>
                 <input className="input" type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
               </div>
               <div className="flex gap-3 pt-2">
-                <button type="submit" className="btn-primary flex-1">{editing ? 'Kaydet' : 'Ekle'}</button>
-                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">İptal</button>
+                <button type="submit" className="btn-primary flex-1">{editing ? t('common.save') : t('common.add')}</button>
+                <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">{t('common.cancel')}</button>
               </div>
             </form>
           </div>

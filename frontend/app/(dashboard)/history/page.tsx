@@ -5,18 +5,21 @@ import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { InventoryHistoryItem, ActionType, Store } from '@/types';
 import Pagination from '@/components/ui/Pagination';
+import { useI18n } from '@/lib/i18n';
+import { dateLocale } from '@/lib/dictionaries';
 
-const ACTION_LABEL: Record<ActionType, { label: string; color: string; icon: string }> = {
-  STOCK_ADDED:        { label: 'Stok Eklendi',        color: 'bg-green-100 text-green-700',  icon: '+' },
-  TRANSFER_SENT:      { label: 'Transfer Gönderildi', color: 'bg-orange-100 text-orange-700', icon: '↑' },
-  TRANSFER_RECEIVED:  { label: 'Transfer Alındı',     color: 'bg-blue-100 text-blue-700',    icon: '↓' },
-  MANUAL_UPDATE:      { label: 'Manuel Güncelleme',   color: 'bg-gray-100 text-gray-700',    icon: '✎' },
-  SALE:               { label: 'Satış',               color: 'bg-purple-100 text-purple-700',icon: '−' },
+const ACTION_LABEL: Record<ActionType, { labelKey: string; color: string; icon: string }> = {
+  STOCK_ADDED:        { labelKey: 'history.actionStockAdded',       color: 'bg-green-100 text-green-700',  icon: '+' },
+  TRANSFER_SENT:      { labelKey: 'history.actionTransferSent',     color: 'bg-orange-100 text-orange-700', icon: '↑' },
+  TRANSFER_RECEIVED:  { labelKey: 'history.actionTransferReceived', color: 'bg-blue-100 text-blue-700',    icon: '↓' },
+  MANUAL_UPDATE:      { labelKey: 'history.actionManualUpdate',     color: 'bg-gray-100 text-gray-700',    icon: '✎' },
+  SALE:               { labelKey: 'history.actionSale',             color: 'bg-purple-100 text-purple-700',icon: '−' },
 };
 
 const LIMIT = 20;
 
 export default function HistoryPage() {
+  const { t, lang } = useI18n();
   const [items, setItems] = useState<InventoryHistoryItem[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
   const [filterStore, setFilterStore]   = useState<string>('');
@@ -37,11 +40,11 @@ export default function HistoryPage() {
       setTotal(data.total);
       setTotalPages(data.total_pages);
     } catch {
-      toast.error('Geçmiş yüklenemedi');
+      toast.error(t('history.loadFailed'));
     } finally {
       setLoading(false);
     }
-  }, [page, filterStore, filterAction]);
+  }, [page, filterStore, filterAction, t]);
 
   useEffect(() => {
     api.get('/stores').then(({ data }) => {
@@ -56,8 +59,8 @@ export default function HistoryPage() {
     <div className="p-4 sm:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Stok Geçmişi</h1>
-          <p className="text-gray-500 text-sm mt-1">{total} kayıt</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('history.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('history.count', { count: total })}</p>
         </div>
       </div>
 
@@ -65,16 +68,16 @@ export default function HistoryPage() {
       <div className="card mb-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <select className="input" value={filterStore} onChange={(e) => setFilterStore(e.target.value)}>
-            <option value="">Tüm Mağazalar</option>
+            <option value="">{t('history.allStores')}</option>
             {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
           </select>
           <select className="input" value={filterAction} onChange={(e) => setFilterAction(e.target.value)}>
-            <option value="">Tüm Aksiyonlar</option>
-            <option value="STOCK_ADDED">Stok Eklendi</option>
-            <option value="TRANSFER_SENT">Transfer Gönderildi</option>
-            <option value="TRANSFER_RECEIVED">Transfer Alındı</option>
-            <option value="MANUAL_UPDATE">Manuel Güncelleme</option>
-            <option value="SALE">Satış</option>
+            <option value="">{t('history.allActions')}</option>
+            <option value="STOCK_ADDED">{t('history.actionStockAdded')}</option>
+            <option value="TRANSFER_SENT">{t('history.actionTransferSent')}</option>
+            <option value="TRANSFER_RECEIVED">{t('history.actionTransferReceived')}</option>
+            <option value="MANUAL_UPDATE">{t('history.actionManualUpdate')}</option>
+            <option value="SALE">{t('history.actionSale')}</option>
           </select>
         </div>
       </div>
@@ -85,7 +88,7 @@ export default function HistoryPage() {
         </div>
       ) : items.length === 0 ? (
         <div className="card text-center py-12 text-gray-500">
-          {filterStore || filterAction ? 'Filtreye uyan kayıt yok' : 'Henüz kayıt yok'}
+          {filterStore || filterAction ? t('history.noneFiltered') : t('history.none')}
         </div>
       ) : (
         <div className="card">
@@ -101,7 +104,7 @@ export default function HistoryPage() {
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-3">
                       <span className={`text-xs font-semibold px-2 py-0.5 rounded-full self-start ${meta.color}`}>
-                        {meta.label}
+                        {t(meta.labelKey)}
                       </span>
                       <span className="text-sm font-medium text-gray-900">
                         {item.product_name} <span className="text-gray-500 text-xs font-mono">({item.product_sku})</span>
@@ -118,7 +121,7 @@ export default function HistoryPage() {
                     {item.actor_name && <p className="text-xs text-gray-500 mt-0.5">👤 {item.actor_name}</p>}
                   </div>
                   <div className="text-xs text-gray-400 whitespace-nowrap">
-                    {new Date(item.created_at).toLocaleString('tr-TR')}
+                    {new Date(item.created_at).toLocaleString(dateLocale[lang])}
                   </div>
                 </li>
               );

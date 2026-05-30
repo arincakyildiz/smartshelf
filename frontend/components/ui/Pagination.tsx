@@ -1,5 +1,7 @@
 'use client';
 
+import { useT } from '@/lib/i18n';
+
 interface Props {
   page: number;
   totalPages: number;
@@ -9,9 +11,10 @@ interface Props {
 }
 
 export default function Pagination({ page, totalPages, total, limit, onPageChange }: Props) {
+  const t = useT();
   if (totalPages <= 1) {
     return (
-      <p className="text-sm text-gray-500 mt-4">Toplam {total} kayıt</p>
+      <p className="text-sm text-gray-500 mt-4">{t('pagination.totalRecords', { total })}</p>
     );
   }
 
@@ -33,9 +36,7 @@ export default function Pagination({ page, totalPages, total, limit, onPageChang
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mt-4 pt-4 border-t border-gray-100">
-      <p className="text-sm text-gray-500">
-        <strong>{from}-{to}</strong> arası, toplam <strong>{total}</strong> kayıt
-      </p>
+      <p className="text-sm text-gray-500">{t('pagination.range', { from, to, total })}</p>
       <div className="flex items-center gap-1">
         <button
           onClick={() => onPageChange(page - 1)}

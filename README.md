@@ -14,7 +14,8 @@ Bir mağazada stok bittiğinde, aynı ürünü elinde bulunduran diğer mağazal
 | Cache | Redis (ioredis) | Redis yoksa ioredis-mock ile bellek içi fallback |
 | Kimlik doğrulama | JWT (Bearer) + bcrypt | Rol bazlı yetki (admin / store_manager) |
 | Gerçek zamanlı | Socket.io | Stok ve transfer değişikliklerinde canlı güncelleme |
-| Test | Jest + Supertest | 54 test, 6 suite |
+| Test | Jest + Supertest | 59 test, 6 suite |
+| Çoklu dil | Türkçe / İngilizce | İstemci tarafı i18n (LanguageProvider), arayüz + hata mesajları |
 | API dokümantasyonu | Swagger (OpenAPI 3) | `/api-docs` altında |
 | Container | Docker + Docker Compose | |
 
@@ -92,6 +93,8 @@ Admin tüm mağazaları görür ve değiştirir. Mağaza yöneticisi yalnızca k
 
 **Brute force koruması.** Rate limit yalnızca `/api/auth/login` üzerinde (15 dakikada 20 deneme). Tüm API'ye genel limit konmadı, çünkü normal kullanımda tablo ve dropdown'lar kısa sürede çok sayıda istek atabiliyor.
 
+**Çoklu dil (i18n).** Arayüz Türkçe ve İngilizce arasında geçiş yapabilir. Harici bir kütüphane yerine hafif bir React context kullanıldı (`lib/i18n.tsx` + `lib/dictionaries.ts`); seçim `localStorage`'da saklanır, varsayılan Türkçe. Tüm sabit metinler `t('anahtar')` üzerinden çözülür. Backend hata yanıtları metnin yanında sabit bir `code` alanı da döndürür (ör. `INVALID_CREDENTIALS`, `EMAIL_EXISTS`); frontend bu kodu aktif dile çevirir (`apiErrorMessage`), kod yoksa ham mesaja düşer. Böylece sunucu dilden bağımsız kalırken kullanıcı her zaman kendi dilinde mesaj görür.
+
 ## API uç noktaları
 
 ```
@@ -138,7 +141,7 @@ cd backend
 npm test
 ```
 
-54 test, 6 suite halinde: eşleştirme algoritması, JWT giriş akışı, ürün CRUD, stok seviyesi sınırları, rol/mağaza kapsamı kontrolü ve hata yönetimi (async hata iletimi + Mongoose hata eşleme). Testler veritabanı ve Redis'i mock'lar, çalışan bir MongoDB gerektirmez.
+59 test, 6 suite halinde: eşleştirme algoritması, JWT giriş akışı, ürün CRUD, stok seviyesi sınırları, rol/mağaza kapsamı kontrolü ve hata yönetimi (async hata iletimi + Mongoose hata eşleme). Testler veritabanı ve Redis'i mock'lar, çalışan bir MongoDB gerektirmez.
 
 ## Referans tablolar
 

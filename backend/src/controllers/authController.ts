@@ -48,19 +48,19 @@ function publicUser(user: UserWithId) {
 export async function register(req: Request, res: Response): Promise<void> {
   const parsed = registerSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Geçersiz istek', details: parsed.error.issues });
+    res.status(400).json({ error: 'Geçersiz istek', code: 'INVALID_REQUEST', details: parsed.error.issues });
     return;
   }
   const { email, password, name, role, store_id } = parsed.data;
 
   if (role === 'store_manager' && !store_id) {
-    res.status(400).json({ error: 'Store manager için store_id zorunlu' });
+    res.status(400).json({ error: 'Store manager için store_id zorunlu', code: 'STORE_ID_REQUIRED' });
     return;
   }
 
   const existing = await User.findOne({ email });
   if (existing) {
-    res.status(409).json({ error: 'Bu e-posta zaten kayıtlı' });
+    res.status(409).json({ error: 'Bu e-posta zaten kayıtlı', code: 'EMAIL_EXISTS' });
     return;
   }
 
@@ -75,20 +75,20 @@ export async function register(req: Request, res: Response): Promise<void> {
 export async function login(req: Request, res: Response): Promise<void> {
   const parsed = loginSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Geçersiz istek', details: parsed.error.issues });
+    res.status(400).json({ error: 'Geçersiz istek', code: 'INVALID_REQUEST', details: parsed.error.issues });
     return;
   }
   const { email, password } = parsed.data;
 
   const user = await User.findOne({ email });
   if (!user) {
-    res.status(401).json({ error: 'E-posta veya şifre hatalı' });
+    res.status(401).json({ error: 'E-posta veya şifre hatalı', code: 'INVALID_CREDENTIALS' });
     return;
   }
 
   const valid = await bcrypt.compare(password, user.password_hash);
   if (!valid) {
-    res.status(401).json({ error: 'E-posta veya şifre hatalı' });
+    res.status(401).json({ error: 'E-posta veya şifre hatalı', code: 'INVALID_CREDENTIALS' });
     return;
   }
 
@@ -99,7 +99,7 @@ export async function login(req: Request, res: Response): Promise<void> {
 export async function signup(req: Request, res: Response): Promise<void> {
   const parsed = signupSchema.safeParse(req.body);
   if (!parsed.success) {
-    res.status(400).json({ error: 'Geçersiz istek', details: parsed.error.issues });
+    res.status(400).json({ error: 'Geçersiz istek', code: 'INVALID_REQUEST', details: parsed.error.issues });
     return;
   }
   const { email, password, name, store_id } = parsed.data;
@@ -107,13 +107,13 @@ export async function signup(req: Request, res: Response): Promise<void> {
   // Seçilen mağaza geçerli ve aktif olmalı
   const store = await Store.findById(store_id).catch(() => null);
   if (!store || !store.is_active) {
-    res.status(400).json({ error: 'Geçerli bir mağaza seçin' });
+    res.status(400).json({ error: 'Geçerli bir mağaza seçin', code: 'STORE_INVALID' });
     return;
   }
 
   const existing = await User.findOne({ email });
   if (existing) {
-    res.status(409).json({ error: 'Bu e-posta zaten kayıtlı' });
+    res.status(409).json({ error: 'Bu e-posta zaten kayıtlı', code: 'EMAIL_EXISTS' });
     return;
   }
 
@@ -133,7 +133,7 @@ export async function listStoresForSignup(_req: Request, res: Response): Promise
 export async function me(req: Request, res: Response): Promise<void> {
   const user = await User.findById(req.user!.id).select('-password_hash');
   if (!user) {
-    res.status(404).json({ error: 'Kullanıcı bulunamadı' });
+    res.status(404).json({ error: 'Kullanıcı bulunamadı', code: 'USER_NOT_FOUND' });
     return;
   }
   res.json(user);

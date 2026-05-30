@@ -38,7 +38,7 @@ const authLimiter = rateLimit({
   max: 20,
   standardHeaders: true,
   legacyHeaders: false,
-  message: { error: 'Çok fazla deneme. 15 dakika sonra tekrar deneyin.' },
+  message: { error: 'Çok fazla deneme. 15 dakika sonra tekrar deneyin.', code: 'TOO_MANY_ATTEMPTS' },
 });
 
 app.get('/health', (_req, res) => res.json({ status: 'ok' }));

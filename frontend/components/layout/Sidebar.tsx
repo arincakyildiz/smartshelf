@@ -4,33 +4,35 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { removeToken } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
+import LanguageToggle from '@/components/ui/LanguageToggle';
 
 const nav = [
-  { href: '/dashboard', label: 'Dashboard', icon: (
+  { href: '/dashboard', labelKey: 'nav.dashboard', icon: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
   )},
-  { href: '/products', label: 'Ürünler', icon: (
+  { href: '/products', labelKey: 'nav.products', icon: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
   )},
-  { href: '/stores', label: 'Mağazalar', icon: (
+  { href: '/stores', labelKey: 'nav.stores', icon: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
   )},
-  { href: '/inventory', label: 'Stok', icon: (
+  { href: '/inventory', labelKey: 'nav.inventory', icon: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
   )},
-  { href: '/requests', label: 'Talepler', icon: (
+  { href: '/requests', labelKey: 'nav.requests', icon: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
   )},
-  { href: '/transfers', label: 'Transferler', icon: (
+  { href: '/transfers', labelKey: 'nav.transfers', icon: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" />
   )},
-  { href: '/history', label: 'Geçmiş', icon: (
+  { href: '/history', labelKey: 'nav.history', icon: (
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
   )},
@@ -39,6 +41,7 @@ const nav = [
 export default function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
+  const t = useT();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   function logout() {
@@ -63,7 +66,7 @@ export default function Sidebar() {
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-1">
-        {nav.map(({ href, label, icon }) => {
+        {nav.map(({ href, labelKey, icon }) => {
           const active = pathname === href || pathname.startsWith(href + '/');
           return (
             <Link
@@ -79,14 +82,17 @@ export default function Sidebar() {
               <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 {icon}
               </svg>
-              {label}
+              {t(labelKey)}
             </Link>
           );
         })}
       </nav>
 
-      {/* Logout */}
-      <div className="px-3 py-4 border-t border-navy-800">
+      {/* Language + Logout */}
+      <div className="px-3 py-4 border-t border-navy-800 space-y-3">
+        <div className="px-1">
+          <LanguageToggle className="w-full justify-center" />
+        </div>
         <button
           onClick={logout}
           className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-semibold text-white/90 hover:bg-red-500 hover:text-white transition-colors"
@@ -95,7 +101,7 @@ export default function Sidebar() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
           </svg>
-          Çıkış Yap
+          {t('nav.logout')}
         </button>
       </div>
     </>

@@ -4,8 +4,10 @@ import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { Store } from '@/types';
+import { useT, apiErrorMessage } from '@/lib/i18n';
 
 export default function StoresPage() {
+  const t = useT();
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
@@ -29,7 +31,7 @@ export default function StoresPage() {
       // city filter active → response is array (no pagination needed for stores typically)
       setStores(Array.isArray(data) ? data : data.items);
     } catch {
-      toast.error('Mağazalar yüklenemedi');
+      toast.error(t('stores.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -62,15 +64,15 @@ export default function StoresPage() {
     try {
       if (editing) {
         await api.put(`/stores/${editing.id}`, form);
-        toast.success('Mağaza güncellendi');
+        toast.success(t('stores.updated'));
       } else {
         await api.post('/stores', form);
-        toast.success('Mağaza eklendi');
+        toast.success(t('stores.added'));
       }
       setShowModal(false);
       fetchStores();
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'İşlem başarısız');
+      toast.error(apiErrorMessage(t, err, 'stores.actionFailed'));
     }
   }
 
@@ -79,32 +81,34 @@ export default function StoresPage() {
       await api.put(`/stores/${store.id}`, { is_active: !store.is_active });
       fetchStores();
     } catch {
-      toast.error('Güncelleme başarısız');
+      toast.error(t('stores.updateFailed'));
     }
   }
 
   async function handleDelete(store: Store) {
-    if (!confirm(`"${store.name}" mağazasını silmek istiyor musunuz?`)) return;
+    if (!confirm(t('stores.confirmDelete', { name: store.name }))) return;
     try {
       await api.delete(`/stores/${store.id}`);
-      toast.success('Mağaza silindi');
+      toast.success(t('stores.deleted'));
       fetchStores();
     } catch (err: any) {
       const data = err.response?.data;
       if (err.response?.status === 409 && data?.details) {
         const { inventory_rows, transfers, requests, users } = data.details;
-        const msg = `Bağlı kayıtlar:\n• ${inventory_rows} envanter\n• ${transfers} transfer\n• ${requests} talep\n• ${users} kullanıcı\n\nYine de tüm bağlı kayıtlarla birlikte silinsin mi?`;
+        const msg = t('stores.linkedRecords', {
+          inventory: inventory_rows, transfers, requests, users,
+        });
         if (confirm(msg)) {
           try {
             await api.delete(`/stores/${store.id}?force=true`);
-            toast.success('Mağaza ve bağlı kayıtlar silindi');
+            toast.success(t('stores.forceDeleted'));
             fetchStores();
           } catch {
-            toast.error('Force delete başarısız');
+            toast.error(t('stores.forceDeleteFailed'));
           }
         }
       } else {
-        toast.error(data?.error || 'Silme başarısız');
+        toast.error(apiErrorMessage(t, err, 'stores.deleteFailed'));
       }
     }
   }
@@ -113,10 +117,10 @@ export default function StoresPage() {
     <div className="p-4 sm:p-8">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Mağazalar</h1>
-          <p className="text-gray-500 text-sm mt-1">{stores.length} mağaza</p>
+          <h1 className="text-2xl font-bold text-gray-900">{t('stores.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('stores.count', { count: stores.length })}</p>
         </div>
-        <button onClick={openCreate} className="btn-primary">+ Mağaza Ekle</button>
+        <button onClick={openCreate} className="btn-primary">{t('stores.add')}</button>
       </div>
 
       {/* Filters */}
@@ -131,19 +135,19 @@ export default function StoresPage() {
             <input
               type="text"
               className="input pl-9"
-              placeholder="Mağaza adı veya şehir ara..."
+              placeholder={t('stores.searchPlaceholder')}
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
           </div>
           <select className="input" value={filterCity} onChange={(e) => setFilterCity(e.target.value)}>
-            <option value="">Tüm Şehirler</option>
+            <option value="">{t('stores.allCities')}</option>
             {cities.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
           <select className="input" value={filterActive} onChange={(e) => setFilterActive(e.target.value)}>
-            <option value="">Tüm Durumlar</option>
-            <option value="true">Sadece Aktif</option>
-            <option value="false">Sadece Pasif</option>
+            <option value="">{t('stores.allStatuses')}</option>
+            <option value="true">{t('stores.activeOnly')}</option>
+            <option value="false">{t('stores.passiveOnly')}</option>
           </select>
         </div>
       </div>
@@ -176,7 +180,7 @@ export default function StoresPage() {
                     : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
                 }`}
               >
-                {store.is_active ? 'Aktif' : 'Pasif'}
+                {store.is_active ? t('stores.active') : t('stores.passive')}
               </button>
             </div>
 
@@ -187,7 +191,7 @@ export default function StoresPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                Düzenle
+                {t('common.edit')}
               </button>
               <button onClick={() => handleDelete(store)}
                 className="flex-1 text-red-600 hover:bg-red-50 text-xs font-medium py-1.5 rounded-md transition-colors flex items-center justify-center gap-1.5">
@@ -195,7 +199,7 @@ export default function StoresPage() {
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                     d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Sil
+                {t('common.delete')}
               </button>
             </div>
           </div>
@@ -206,16 +210,16 @@ export default function StoresPage() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
             <h2 className="text-lg font-semibold mb-5">
-              {editing ? 'Mağaza Düzenle' : 'Yeni Mağaza'}
+              {editing ? t('stores.editTitle') : t('stores.newTitle')}
             </h2>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Mağaza Adı</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('stores.fieldName')}</label>
                 <input className="input" value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })} required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Şehir</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">{t('common.city')}</label>
                 <input className="input" value={form.city}
                   onChange={(e) => setForm({ ...form, city: e.target.value })} required />
               </div>
@@ -223,14 +227,14 @@ export default function StoresPage() {
                 <input type="checkbox" className="w-4 h-4 accent-navy-800"
                   checked={form.is_active}
                   onChange={(e) => setForm({ ...form, is_active: e.target.checked })} />
-                <span className="text-gray-700">Aktif</span>
+                <span className="text-gray-700">{t('stores.active')}</span>
               </label>
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="btn-primary flex-1">
-                  {editing ? 'Kaydet' : 'Ekle'}
+                  {editing ? t('common.save') : t('common.add')}
                 </button>
                 <button type="button" onClick={() => setShowModal(false)}
-                  className="btn-secondary flex-1">İptal</button>
+                  className="btn-secondary flex-1">{t('common.cancel')}</button>
               </div>
             </form>
           </div>

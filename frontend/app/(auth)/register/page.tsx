@@ -6,11 +6,14 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { isAuthenticated, setToken } from '@/lib/auth';
+import { useT, apiErrorMessage } from '@/lib/i18n';
+import LanguageToggle from '@/components/ui/LanguageToggle';
 
 type SignupStore = { id: string; name: string; city: string };
 
 export default function RegisterPage() {
   const router = useRouter();
+  const t = useT();
   const [stores, setStores] = useState<SignupStore[]>([]);
   const [form, setForm] = useState({ name: '', email: '', password: '', store_id: '' });
   const [loading, setLoading] = useState(false);
@@ -22,13 +25,13 @@ export default function RegisterPage() {
   useEffect(() => {
     api.get('/auth/stores')
       .then(({ data }) => setStores(data))
-      .catch(() => toast.error('Mağaza listesi yüklenemedi'));
-  }, []);
+      .catch(() => toast.error(t('register.storesLoadFailed')));
+  }, [t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (form.password.length < 6) {
-      toast.error('Şifre en az 6 karakter olmalı');
+      toast.error(t('register.passwordTooShort'));
       return;
     }
     setLoading(true);
@@ -36,10 +39,10 @@ export default function RegisterPage() {
       const { data } = await api.post('/auth/signup', form);
       setToken(data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
-      toast.success('Hesabınız oluşturuldu');
+      toast.success(t('register.success'));
       router.push('/dashboard');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Kayıt başarısız');
+      toast.error(apiErrorMessage(t, err, 'register.failed'));
     } finally {
       setLoading(false);
     }
@@ -47,6 +50,9 @@ export default function RegisterPage() {
 
   return (
     <div className="min-h-screen bg-navy-900 flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="inline-flex items-center justify-center w-16 h-16 bg-white rounded-2xl shadow-lg mb-4">
@@ -56,14 +62,14 @@ export default function RegisterPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-white">SmartShelf</h1>
-          <p className="text-navy-200 mt-1 text-sm">Stok Yönetim Sistemi</p>
+          <p className="text-navy-200 mt-1 text-sm">{t('app.tagline')}</p>
         </div>
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Hesap Oluştur</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">{t('register.title')}</h2>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Ad Soyad</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.name')}</label>
               <input
                 type="text"
                 className="input"
@@ -74,7 +80,7 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.email')}</label>
               <input
                 type="email"
                 className="input"
@@ -84,7 +90,7 @@ export default function RegisterPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Şifre</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.password')}</label>
               <input
                 type="password"
                 className="input"
@@ -93,30 +99,30 @@ export default function RegisterPage() {
                 minLength={6}
                 required
               />
-              <p className="text-xs text-gray-400 mt-1">En az 6 karakter</p>
+              <p className="text-xs text-gray-400 mt-1">{t('register.passwordHint')}</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Mağaza</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('register.store')}</label>
               <select
                 className="input"
                 value={form.store_id}
                 onChange={(e) => setForm({ ...form, store_id: e.target.value })}
                 required
               >
-                <option value="">Seçiniz...</option>
+                <option value="">{t('common.select')}</option>
                 {stores.map((s) => (
                   <option key={s.id} value={s.id}>{s.name} — {s.city}</option>
                 ))}
               </select>
-              <p className="text-xs text-gray-400 mt-1">Mağaza yöneticisi olarak kaydolursunuz</p>
+              <p className="text-xs text-gray-400 mt-1">{t('register.storeHint')}</p>
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-              {loading ? 'Oluşturuluyor...' : 'Kayıt Ol'}
+              {loading ? t('register.submitting') : t('register.submit')}
             </button>
           </form>
           <p className="text-sm text-gray-500 mt-5 text-center">
-            Zaten hesabın var mı?{' '}
-            <Link href="/login" className="text-navy-700 font-medium hover:underline">Giriş yap</Link>
+            {t('register.haveAccount')}{' '}
+            <Link href="/login" className="text-navy-700 font-medium hover:underline">{t('register.login')}</Link>
           </p>
         </div>
       </div>

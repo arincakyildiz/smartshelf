@@ -6,9 +6,12 @@ import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { isAuthenticated, setToken } from '@/lib/auth';
+import { useT } from '@/lib/i18n';
+import LanguageToggle from '@/components/ui/LanguageToggle';
 
 export default function LoginPage() {
   const router = useRouter();
+  const t = useT();
   const [form, setForm] = useState({ email: 'admin@smartshelf.com', password: 'admin123' });
   const [loading, setLoading] = useState(false);
 
@@ -25,7 +28,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(data.user));
       router.push('/dashboard');
     } catch {
-      toast.error('E-posta veya şifre hatalı');
+      toast.error(t('login.error'));
     } finally {
       setLoading(false);
     }
@@ -33,6 +36,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-navy-900 flex items-center justify-center p-4">
+      <div className="absolute top-4 right-4">
+        <LanguageToggle />
+      </div>
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
@@ -43,15 +49,15 @@ export default function LoginPage() {
             </svg>
           </div>
           <h1 className="text-3xl font-bold text-white">SmartShelf</h1>
-          <p className="text-navy-200 mt-1 text-sm">Stok Yönetim Sistemi</p>
+          <p className="text-navy-200 mt-1 text-sm">{t('app.tagline')}</p>
         </div>
 
         {/* Card */}
         <div className="bg-white rounded-2xl shadow-2xl p-8">
-          <h2 className="text-xl font-semibold text-gray-800 mb-6">Giriş Yap</h2>
+          <h2 className="text-xl font-semibold text-gray-800 mb-6">{t('login.title')}</h2>
           <form onSubmit={handleSubmit} className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">E-posta</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.email')}</label>
               <input
                 type="email"
                 className="input"
@@ -61,7 +67,7 @@ export default function LoginPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Şifre</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">{t('login.password')}</label>
               <input
                 type="password"
                 className="input"
@@ -71,15 +77,15 @@ export default function LoginPage() {
               />
             </div>
             <button type="submit" disabled={loading} className="btn-primary w-full py-2.5">
-              {loading ? 'Giriş yapılıyor...' : 'Giriş Yap'}
+              {loading ? t('login.submitting') : t('login.submit')}
             </button>
           </form>
           <p className="text-sm text-gray-500 mt-5 text-center">
-            Hesabın yok mu?{' '}
-            <Link href="/register" className="text-navy-700 font-medium hover:underline">Kayıt ol</Link>
+            {t('login.noAccount')}{' '}
+            <Link href="/register" className="text-navy-700 font-medium hover:underline">{t('login.register')}</Link>
           </p>
           <p className="text-xs text-gray-400 mt-3 text-center">
-            Demo: admin@smartshelf.com / admin123
+            {t('login.demo')}
           </p>
         </div>
       </div>

@@ -5,6 +5,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts';
 import { DashboardStats, ExcessStore } from '@/types';
+import { useT } from '@/lib/i18n';
 
 const COLORS = {
   critical: '#ef4444',
@@ -16,15 +17,16 @@ const COLORS = {
 
 // ─── Stok Dağılımı (Pie) ──────────────────────────────────────────────────────
 export function StockDistributionChart({ stats }: { stats: DashboardStats }) {
+  const t = useT();
   const data = [
-    { name: 'Kritik (<10)',   value: stats.critical_stock, color: COLORS.critical },
-    { name: 'Düşük (10-24)',  value: stats.low_stock,      color: COLORS.low      },
-    { name: 'Normal (25+)',   value: stats.normal_stock,   color: COLORS.normal   },
+    { name: t('charts.critical'), value: stats.critical_stock, color: COLORS.critical },
+    { name: t('charts.low'),      value: stats.low_stock,      color: COLORS.low      },
+    { name: t('charts.normal'),   value: stats.normal_stock,   color: COLORS.normal   },
   ];
 
   return (
     <div className="card">
-      <h3 className="text-base font-semibold text-gray-900 mb-4">Stok Seviyesi Dağılımı</h3>
+      <h3 className="text-base font-semibold text-gray-900 mb-4">{t('charts.stockDistribution')}</h3>
       <ResponsiveContainer width="100%" height={240}>
         <PieChart>
           <Pie data={data} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
@@ -40,6 +42,7 @@ export function StockDistributionChart({ stats }: { stats: DashboardStats }) {
 
 // ─── Mağaza Karşılaştırma (Bar) ───────────────────────────────────────────────
 export function StoreComparisonChart({ excessStores }: { excessStores: ExcessStore[] }) {
+  const t = useT();
   const data = excessStores.map((s) => ({
     name:  s.store_name.replace('Mağaza ', '').slice(0, 18),
     stok:  s.total_quantity,
@@ -48,7 +51,7 @@ export function StoreComparisonChart({ excessStores }: { excessStores: ExcessSto
 
   return (
     <div className="card">
-      <h3 className="text-base font-semibold text-gray-900 mb-4">Mağaza Stok Karşılaştırma</h3>
+      <h3 className="text-base font-semibold text-gray-900 mb-4">{t('charts.storeComparison')}</h3>
       <ResponsiveContainer width="100%" height={240}>
         <BarChart data={data}>
           <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
@@ -56,8 +59,8 @@ export function StoreComparisonChart({ excessStores }: { excessStores: ExcessSto
           <YAxis tick={{ fontSize: 11 }} />
           <Tooltip />
           <Legend />
-          <Bar dataKey="stok"  fill={COLORS.navy}   name="Toplam Stok"     radius={[4, 4, 0, 0]} />
-          <Bar dataKey="fazla" fill={COLORS.excess} name="Fazla Ürün (50+)" radius={[4, 4, 0, 0]} />
+          <Bar dataKey="stok"  fill={COLORS.navy}   name={t('charts.totalStock')}   radius={[4, 4, 0, 0]} />
+          <Bar dataKey="fazla" fill={COLORS.excess} name={t('charts.excessProduct')} radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
     </div>

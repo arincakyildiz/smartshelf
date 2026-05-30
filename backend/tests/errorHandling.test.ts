@@ -48,7 +48,7 @@ describe('errorHandler()', () => {
     const res = mockRes();
     errorHandler(err, {} as any, res, jest.fn());
     expect(res.status).toHaveBeenCalledWith(409);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Bu sku zaten kullanımda' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Bu sku zaten kullanımda', code: 'DUPLICATE_FIELD', field: 'sku' });
   });
 
   it('beklenmeyen hata -> 500 ve productionda message sızdırmaz', () => {
@@ -56,13 +56,13 @@ describe('errorHandler()', () => {
     const res = mockRes();
     errorHandler(new Error('iç detay') as any, {} as any, res, jest.fn());
     expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({ error: 'Sunucu hatası' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Sunucu hatası', code: 'SERVER' });
   });
 
   it('production dışında message döner', () => {
     process.env.NODE_ENV = 'test';
     const res = mockRes();
     errorHandler(new Error('iç detay') as any, {} as any, res, jest.fn());
-    expect(res.json).toHaveBeenCalledWith({ error: 'Sunucu hatası', message: 'iç detay' });
+    expect(res.json).toHaveBeenCalledWith({ error: 'Sunucu hatası', code: 'SERVER', message: 'iç detay' });
   });
 });
