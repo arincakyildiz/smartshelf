@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
-import { InventoryItem, Store } from '@/types';
+import { InventoryItem, Store, Product } from '@/types';
 import { useT } from '@/lib/i18n';
+import { getStockLevel } from '@/lib/stock';
 
 const WS_URL = process.env.NEXT_PUBLIC_WS_URL || 'http://localhost:4000';
 
@@ -19,6 +20,7 @@ export default function InventoryPage() {
   const t = useT();
   const [inventory, setInventory] = useState<InventoryItem[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [editRow, setEditRow] = useState<InventoryItem | null>(null);
@@ -39,6 +41,9 @@ export default function InventoryPage() {
   useEffect(() => {
     api.get('/stores').then(({ data }) => {
       setStores(Array.isArray(data) ? data : data.items);
+    });
+    api.get('/products?limit=1000').then(({ data }) => {
+      setProducts(Array.isArray(data) ? data : data.items);
     });
   }, []);
 
@@ -62,6 +67,31 @@ export default function InventoryPage() {
     } catch {
       toast.error(t('inventory.updateFailed'));
     }
+  }
+
+  // Bir mağaza seçiliyse tüm ürünleri göster: stok satırı olmayanlar miktar 0 ile
+  // listelenir, böylece yeni eklenen ürünlere de stok girilebilir.
+  let rows: InventoryItem[] = inventory;
+  if (selectedStore) {
+    const store = stores.find((s) => s.id === selectedStore);
+    const byProduct = new Map(inventory.map((i) => [i.product_id, i]));
+    rows = products.map((p) => {
+      const existing = byProduct.get(p.id);
+      if (existing) return existing;
+      return {
+        id: `new-${p.id}`,
+        store_id: selectedStore,
+        product_id: p.id,
+        quantity: 0,
+        store_name: store?.name ?? '',
+        store_city: store?.city ?? '',
+        product_name: p.name,
+        product_sku: p.sku,
+        category: p.category,
+        price: p.price,
+        stock_level: getStockLevel(0),
+      };
+    });
   }
 
   return (
@@ -100,7 +130,7 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {inventory.map((item) => {
+              {rows.map((item) => {
                 const level = LEVEL_MAP[item.stock_level];
                 const isEditing = editRow?.id === item.id;
                 return (
