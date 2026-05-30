@@ -155,6 +155,10 @@ const tr: Dict = {
   'inventory.updated': 'Stok güncellendi',
   'inventory.updateFailed': 'Güncelleme başarısız',
   'inventory.loadFailed': 'Stok verileri yüklenemedi',
+  'inventory.searchPlaceholder': 'Ürün adı veya SKU ara...',
+  'inventory.allCategories': 'Tüm Kategoriler',
+  'inventory.allLevels': 'Tüm Seviyeler',
+  'inventory.noResults': 'Sonuç bulunamadı',
 
   // ── Requests ────────────────────────────────────────────
   'requests.title': 'Stok Talepleri',
@@ -386,6 +390,10 @@ const en: Dict = {
   'inventory.updated': 'Stock updated',
   'inventory.updateFailed': 'Update failed',
   'inventory.loadFailed': 'Failed to load inventory',
+  'inventory.searchPlaceholder': 'Search product name or SKU...',
+  'inventory.allCategories': 'All Categories',
+  'inventory.allLevels': 'All Levels',
+  'inventory.noResults': 'No results found',
 
   // ── Requests ────────────────────────────────────────────
   'requests.title': 'Stock Requests',

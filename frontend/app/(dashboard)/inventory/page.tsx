@@ -22,6 +22,9 @@ export default function InventoryPage() {
   const [stores, setStores] = useState<Store[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedStore, setSelectedStore] = useState<string>('');
+  const [search, setSearch] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [levelFilter, setLevelFilter] = useState('');
   const [loading, setLoading] = useState(true);
   const [editRow, setEditRow] = useState<InventoryItem | null>(null);
   const [newQty, setNewQty] = useState('');
@@ -94,6 +97,16 @@ export default function InventoryPage() {
     });
   }
 
+  // Arama + kategori + stok seviyesi filtreleri
+  const categories = Array.from(new Set(products.map((p) => p.category))).sort();
+  const q = search.trim().toLowerCase();
+  const filteredRows = rows.filter((item) => {
+    if (q && !item.product_name.toLowerCase().includes(q) && !item.product_sku.toLowerCase().includes(q)) return false;
+    if (categoryFilter && item.category !== categoryFilter) return false;
+    if (levelFilter && item.stock_level !== levelFilter) return false;
+    return true;
+  });
+
   return (
     <div className="p-8">
       <div className="flex items-center justify-between mb-8">
@@ -108,6 +121,26 @@ export default function InventoryPage() {
         >
           <option value="">{t('inventory.allStores')}</option>
           {stores.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+        </select>
+      </div>
+
+      <div className="flex flex-wrap gap-3 mb-4">
+        <input
+          className="input flex-1 min-w-[220px]"
+          type="text"
+          placeholder={t('inventory.searchPlaceholder')}
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
+        <select className="input w-48" value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
+          <option value="">{t('inventory.allCategories')}</option>
+          {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+        </select>
+        <select className="input w-44" value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+          <option value="">{t('inventory.allLevels')}</option>
+          <option value="critical">{t('inventory.levelCritical')}</option>
+          <option value="low">{t('inventory.levelLow')}</option>
+          <option value="normal">{t('inventory.levelNormal')}</option>
         </select>
       </div>
 
@@ -130,7 +163,10 @@ export default function InventoryPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
-              {rows.map((item) => {
+              {filteredRows.length === 0 && (
+                <tr><td colSpan={7} className="py-8 text-center text-gray-400">{t('inventory.noResults')}</td></tr>
+              )}
+              {filteredRows.map((item) => {
                 const level = LEVEL_MAP[item.stock_level];
                 const isEditing = editRow?.id === item.id;
                 return (
