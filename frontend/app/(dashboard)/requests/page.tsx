@@ -123,8 +123,8 @@ export default function RequestsPage() {
                 return (
                   <tr key={r.id} className="hover:bg-gray-50">
                     <td className="py-3 font-mono text-gray-500">#{r.id}</td>
-                    <td className="py-3 font-medium">{r.store_name}</td>
-                    <td className="py-3">{r.product_name}</td>
+                    <td className="py-3 font-medium">{r.store_name ?? <span className="text-gray-400 italic">{t('common.deleted')}</span>}</td>
+                    <td className="py-3">{r.product_name ?? <span className="text-gray-400 italic">{t('common.deleted')}</span>}</td>
                     <td className="py-3 font-semibold">{t('requests.qtyUnit', { qty: r.quantity_needed })}</td>
                     <td className="py-3">
                       <span className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${s.cls}`}>{s.label}</span>

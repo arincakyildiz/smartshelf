@@ -18,6 +18,7 @@ const tr: Dict = {
   'common.status': 'Durum',
   'common.date': 'Tarih',
   'common.unit': 'adet',
+  'common.deleted': '(silinmiş)',
   'common.loadFailed': 'Veriler yüklenemedi',
 
   // ── Navigation / Sidebar ────────────────────────────────
@@ -259,6 +260,7 @@ const en: Dict = {
   'common.status': 'Status',
   'common.date': 'Date',
   'common.unit': 'units',
+  'common.deleted': '(deleted)',
   'common.loadFailed': 'Failed to load data',
 
   // ── Navigation / Sidebar ────────────────────────────────
