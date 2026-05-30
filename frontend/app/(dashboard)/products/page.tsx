@@ -31,6 +31,7 @@ export default function ProductsPage() {
   const [showModal, setShowModal] = useState(false);
   const [editing, setEditing] = useState<Row | null>(null);
   const [form, setForm] = useState({ name: '', sku: '', category: '', price: '' });
+  const [addingCategory, setAddingCategory] = useState(false);
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -75,12 +76,14 @@ export default function ProductsPage() {
   function openCreate() {
     setEditing(null);
     setForm({ name: '', sku: '', category: '', price: '' });
+    setAddingCategory(false);
     setShowModal(true);
   }
 
   function openEdit(p: Row) {
     setEditing(p);
     setForm({ name: p.name, sku: p.sku, category: p.category, price: String(p.price) });
+    setAddingCategory(false);
     setShowModal(true);
   }
 
@@ -229,10 +232,37 @@ export default function ProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.colCategory')}</label>
-                <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required>
-                  <option value="" disabled>{t('products.selectCategory')}</option>
-                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
-                </select>
+                {addingCategory ? (
+                  <div className="flex gap-2">
+                    <input
+                      className="input flex-1"
+                      placeholder={t('products.newCategoryPlaceholder')}
+                      value={form.category}
+                      onChange={(e) => setForm({ ...form, category: e.target.value })}
+                      autoFocus
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => { setAddingCategory(false); setForm({ ...form, category: '' }); }}
+                      className="btn-secondary px-3"
+                    >{t('common.cancel')}</button>
+                  </div>
+                ) : (
+                  <select
+                    className="input"
+                    value={form.category}
+                    onChange={(e) => {
+                      if (e.target.value === '__new__') { setAddingCategory(true); setForm({ ...form, category: '' }); }
+                      else setForm({ ...form, category: e.target.value });
+                    }}
+                    required
+                  >
+                    <option value="" disabled>{t('products.selectCategory')}</option>
+                    {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                    <option value="__new__">{t('products.newCategory')}</option>
+                  </select>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.fieldPrice')}</label>
