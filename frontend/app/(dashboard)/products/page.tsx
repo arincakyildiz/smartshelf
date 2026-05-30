@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
-import { Product } from '@/types';
+import { Product, Store } from '@/types';
 import Pagination from '@/components/ui/Pagination';
 import { useT, apiErrorMessage } from '@/lib/i18n';
 
@@ -15,6 +15,7 @@ export default function ProductsPage() {
   const t = useT();
   const [rows, setRows] = useState<Row[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Filters & pagination
@@ -32,6 +33,8 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<Row | null>(null);
   const [form, setForm] = useState({ name: '', sku: '', category: '', price: '' });
   const [addingCategory, setAddingCategory] = useState(false);
+  const [initialStore, setInitialStore] = useState('');
+  const [initialQty, setInitialQty] = useState('');
 
   const fetchProducts = useCallback(async () => {
     setLoading(true);
@@ -59,6 +62,7 @@ export default function ProductsPage() {
   // Initial: load categories
   useEffect(() => {
     api.get('/products/categories').then(({ data }) => setCategories(data)).catch(() => {});
+    api.get('/stores').then(({ data }) => setStores(Array.isArray(data) ? data : data.items)).catch(() => {});
   }, []);
 
   // Reload when filters change
@@ -77,6 +81,8 @@ export default function ProductsPage() {
     setEditing(null);
     setForm({ name: '', sku: '', category: '', price: '' });
     setAddingCategory(false);
+    setInitialStore('');
+    setInitialQty('');
     setShowModal(true);
   }
 
@@ -95,7 +101,12 @@ export default function ProductsPage() {
         await api.put(`/products/${editing.id}`, payload);
         toast.success(t('products.updated'));
       } else {
-        await api.post('/products', payload);
+        const { data: created } = await api.post('/products', payload);
+        // Opsiyonel: seçilen mağazaya başlangıç stoğu gir
+        const qty = Number(initialQty);
+        if (initialStore && !isNaN(qty) && qty > 0) {
+          await api.patch(`/inventory/${initialStore}/${created.id}`, { quantity: qty });
+        }
         toast.success(t('products.added'));
       }
       setShowModal(false);
@@ -268,6 +279,21 @@ export default function ProductsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.fieldPrice')}</label>
                 <input className="input" type="number" step="0.01" min="0" value={form.price} onChange={(e) => setForm({ ...form, price: e.target.value })} required />
               </div>
+              {!editing && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.initialStore')}</label>
+                    <select className="input" value={initialStore} onChange={(e) => setInitialStore(e.target.value)}>
+                      <option value="">{t('products.noStore')}</option>
+                      {stores.map((s) => <option key={s.id} value={s.id}>{s.name} — {s.city}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.initialQty')}</label>
+                    <input className="input" type="number" min="0" value={initialQty} onChange={(e) => setInitialQty(e.target.value)} disabled={!initialStore} placeholder="0" />
+                  </div>
+                </div>
+              )}
               <div className="flex gap-3 pt-2">
                 <button type="submit" className="btn-primary flex-1">{editing ? t('common.save') : t('common.add')}</button>
                 <button type="button" onClick={() => setShowModal(false)} className="btn-secondary flex-1">{t('common.cancel')}</button>
