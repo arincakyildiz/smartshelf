@@ -13,13 +13,14 @@ jest.mock('../src/config/redis', () => ({
 jest.mock('../src/models', () => ({
   __esModule: true,
   User: { findOne: jest.fn(), findById: jest.fn(), create: jest.fn() },
-  Product: {}, Store: {}, Inventory: {}, StockRequest: {}, MatchResult: {},
+  Store: { findById: jest.fn(), find: jest.fn() },
+  Product: {}, Inventory: {}, StockRequest: {}, MatchResult: {},
   Transfer: {}, InventoryHistory: {},
 }));
 
 import bcrypt from 'bcryptjs';
 import { app } from '../src/index';
-import { User } from '../src/models';
+import { User, Store } from '../src/models';
 
 describe('POST /api/auth/login', () => {
   beforeEach(() => jest.clearAllMocks());
@@ -77,6 +78,63 @@ describe('POST /api/auth/login', () => {
 
   it('returns 400 for missing fields', async () => {
     const res = await request(app).post('/api/auth/login').send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+describe('POST /api/auth/signup', () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const validBody = {
+    name: 'Yeni Kullanıcı', email: 'yeni@test.com',
+    password: 'gizli123', store_id: 'store-1',
+  };
+
+  it('creates a store_manager and returns token', async () => {
+    (Store.findById as jest.Mock).mockResolvedValue({ id: 'store-1', is_active: true });
+    (User.findOne as jest.Mock).mockResolvedValue(null);
+    (User.create as jest.Mock).mockImplementation(async (doc) => ({
+      id: '99', ...doc,
+    }));
+
+    const res = await request(app).post('/api/auth/signup').send(validBody);
+
+    expect(res.status).toBe(201);
+    expect(res.body.token).toBeDefined();
+    expect(res.body.user.role).toBe('store_manager');
+  });
+
+  it('forces store_manager role even if client sends admin', async () => {
+    (Store.findById as jest.Mock).mockResolvedValue({ id: 'store-1', is_active: true });
+    (User.findOne as jest.Mock).mockResolvedValue(null);
+    (User.create as jest.Mock).mockImplementation(async (doc) => ({ id: '99', ...doc }));
+
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({ ...validBody, role: 'admin' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.user.role).toBe('store_manager');
+    expect((User.create as jest.Mock).mock.calls[0][0].role).toBe('store_manager');
+  });
+
+  it('returns 400 when store is missing or inactive', async () => {
+    (Store.findById as jest.Mock).mockResolvedValue(null);
+    const res = await request(app).post('/api/auth/signup').send(validBody);
+    expect(res.status).toBe(400);
+  });
+
+  it('returns 409 when email already exists', async () => {
+    (Store.findById as jest.Mock).mockResolvedValue({ id: 'store-1', is_active: true });
+    (User.findOne as jest.Mock).mockResolvedValue({ id: '1', email: 'yeni@test.com' });
+    const res = await request(app).post('/api/auth/signup').send(validBody);
+    expect(res.status).toBe(409);
+  });
+
+  it('returns 400 for short password', async () => {
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({ ...validBody, password: '123' });
     expect(res.status).toBe(400);
   });
 });

@@ -27,7 +27,7 @@ const userSchema = new Schema<UserDoc>(
     email:         { type: String, required: true, unique: true, index: true },
     password_hash: { type: String, required: true },
     name:          { type: String, required: true },
-    role:          { type: String, enum: ['admin', 'store_manager'], default: 'admin' },
+    role:          { type: String, enum: ['admin', 'store_manager'], default: 'store_manager' },
     store_id:      { type: Schema.Types.ObjectId, ref: 'Store' },
     created_at:    { type: Date, default: Date.now },
   },
