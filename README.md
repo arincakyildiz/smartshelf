@@ -4,6 +4,14 @@ Mağazalar arası stok takibi ve ürün eşleştirme platformu. Vena yazılım m
 
 Bir mağazada stok bittiğinde, aynı ürünü elinde bulunduran diğer mağazalar arasından en uygun kaynağı puanlayarak öneren; stok hareketlerini mağazalar arası transfer akışıyla yöneten bir sistem. Backend Express + MongoDB, frontend Next.js.
 
+## Canlı Demo
+
+🔗 **https://smartshelf.arincakyildiz.com.tr**
+
+Frontend Vercel'de, backend Render'da, veritabanı MongoDB Atlas'ta çalışıyor. Demo hesaplarıyla (aşağıda) giriş yapabilirsiniz.
+
+> Not: Backend ücretsiz katmanda barındırıldığı için bir süre hareketsiz kalınca uykuya geçer; ilk istek ~50 saniye gecikebilir, sonrası normal hızındadır.
+
 ## Kullanılan teknolojiler
 
 | Katman | Seçim | Not |
