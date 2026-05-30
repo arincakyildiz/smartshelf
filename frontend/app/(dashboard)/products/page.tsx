@@ -229,7 +229,10 @@ export default function ProductsPage() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.colCategory')}</label>
-                <input className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required />
+                <select className="input" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })} required>
+                  <option value="" disabled>{t('products.selectCategory')}</option>
+                  {categories.map((c) => <option key={c} value={c}>{c}</option>)}
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">{t('products.fieldPrice')}</label>
